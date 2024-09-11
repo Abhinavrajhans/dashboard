@@ -1717,8 +1717,8 @@ onMounted(() => {
   connectToSSE();
   name.value = route.params.username;
   connectClientDetailsWebSocket();
-  connectBasketWebSocket();
-  connectStrategyWebSocket();
+  // connectBasketWebSocket();
+  // connectStrategyWebSocket();
 })
 onUnmounted(() => {
   if (eventSource) {
