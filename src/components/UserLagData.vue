@@ -35,7 +35,7 @@ const mix_real_ideal_mtm_table = ref({})
 const userLagData = ref({})
 
 const connectClientLagsDataWebSocket = () => {
-    const clientLagDataDetailSocket = new WebSocket('wss://production.swancapital.in/userLagData');
+    const clientLagDataDetailSocket = new WebSocket('ws://localhost:8000/userLagData');
 
     clientLagDataDetailSocket.onopen = function (e) {
         console.log("ClientLagData details connection established");

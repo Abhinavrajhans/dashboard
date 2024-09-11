@@ -98,7 +98,7 @@ const updateData = () => {
 
 
 const connectWebSocket = () => {
-    const socket = new WebSocket('wss://production.swancapital.in/ws');
+    const socket = new WebSocket('ws://localhost:8000/ws');
 
     socket.onopen = () => {
         console.log('WebSocket connection opened')

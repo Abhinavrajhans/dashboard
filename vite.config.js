@@ -8,7 +8,7 @@ export default defineConfig({
   plugins: [vue()],
   server: {
     proxy: {
-      '/stream': 'https://production.swancapital.in',
+      '/stream': 'https://localhost:8000',
     },
   },
   resolve: {

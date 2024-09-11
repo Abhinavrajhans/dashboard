@@ -68,7 +68,7 @@ const handleMessage = (message) => {
 }
 
 const connectToSSE = () => {
-    const socket = new WebSocket('wss://production.swancapital.in/keydblogs');
+    const socket = new WebSocket('ws://localhost:8000/keydblogs');
 
     socket.onmessage = (event) => {
         if (event.data === 'ping') {
