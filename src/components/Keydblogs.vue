@@ -68,7 +68,7 @@ const handleMessage = (message) => {
 }
 
 const connectToSSE = () => {
-    const socket = new WebSocket('wss://api.swancapital.in/keydblogs');
+    const socket = new WebSocket('wss://production.swancapital.in/keydblogs');
 
     socket.onmessage = (event) => {
         if (event.data === 'ping') {
@@ -137,8 +137,9 @@ onUnmounted(() => {
         </div>
 
         <div class="my-8" v-if="book && showOnPage === 'KeyDB Logs'">
-            <p class="table-heading">{{ showOnPage }}</p>
-            <TanStackTestTable :data="book" :columns="columns" :hasColor="[]" :navigateTo="[]" :showPagination=true />
+            <!-- <p class="table-heading">{{ showOnPage }}</p> -->
+            <TanStackTestTable :title="showOnPage" :data="book" :columns="columns" :hasColor="[]" :navigateTo="[]"
+                :showPagination=true />
         </div>
 
 

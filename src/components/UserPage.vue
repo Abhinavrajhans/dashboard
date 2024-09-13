@@ -23,6 +23,7 @@ const name = ref('');
 const broker = ref('')
 const columnHelper = createColumnHelper()
 const histogram = ref([])
+const histogram_order_fill_lag = ref([])
 const uids = ref([])
 const basket = ref([])
 const live_trade_book_columns_zerodha = [
@@ -84,11 +85,6 @@ const live_trade_book_columns_xts = [
     id: 'ExchangeTransactTime',
     cell: info => info.getValue(),
     header: () => 'ExchangeTransactTime',
-  }),
-  columnHelper.accessor(row => row.ExchangeInstrumentID, {
-    id: 'ExchangeInstrumentID',
-    cell: info => info.getValue(),
-    header: () => 'ExchangeInstrumentID',
   }),
   columnHelper.accessor(row => row.OrderAverageTradedPrice, {
     id: 'OrderAverageTradedPrice',
@@ -274,6 +270,19 @@ const live_order_book_columns_xts = [
     header: () => 'CancelRejectReason',
   }),
 ]
+const signal_position = [
+
+  columnHelper.accessor(row => row.Symbol, {
+    id: 'Symbol',
+    cell: info => info.getValue(),
+    header: () => 'Symbol',
+  }),
+  columnHelper.accessor(row => row.IdealQuantity, {
+    id: 'IdealQuantity',
+    cell: info => info.getValue(),
+    header: () => 'IdealQuantity',
+  }),
+]
 const columns = [
 
   columnHelper.accessor(row => row.AccountName, {
@@ -392,6 +401,11 @@ const combined_df_columns_zerodha = [
     id: 'system_tag',
     cell: info => info.getValue(),
     header: () => 'system_tag',
+  }),
+  columnHelper.accessor(row => row.order_fill_lag, {
+    id: 'order_fill_lag',
+    cell: info => info.getValue(),
+    header: () => 'order_fill_lag',
   }),
   columnHelper.accessor(row => row.signal_lag, {
     id: 'signal_lag',
@@ -621,6 +635,11 @@ const combined_df_columns_xts = [
     cell: info => info.getValue(),
     header: () => 'system_tag',
   }),
+  columnHelper.accessor(row => row.order_fill_lag, {
+    id: 'order_fill_lag',
+    cell: info => info.getValue(),
+    header: () => 'order_fill_lag',
+  }),
   columnHelper.accessor(row => row.signal_lag, {
     id: 'signal_lag',
     cell: info => info.getValue(),
@@ -697,11 +716,6 @@ const combined_df_columns_xts = [
     id: 'ExchangeSegment',
     cell: info => info.getValue(),
     header: () => 'ExchangeSegment'
-  }),
-  columnHelper.accessor(row => row.ExchangeInstrumentID, {
-    id: 'ExchangeInstrumentID',
-    cell: info => info.getValue(),
-    header: () => 'ExchangeInstrumentID'
   }),
   columnHelper.accessor(row => row.OrderType, {
     id: 'OrderType',
@@ -1254,6 +1268,30 @@ const combined_trades_zerodha = [
   }),
 
 ]
+const curr_strategy_mtm = [
+  columnHelper.accessor(row => row.UID, {
+    id: 'UID',
+    cell: info => info.getValue(),
+    header: () => 'UID',
+  }),
+  columnHelper.accessor(row => row.MTM, {
+    id: 'MTM',
+    cell: info => info.getValue(),
+    header: () => 'MTM',
+  }),
+]
+const curr_basket_mtm = [
+  columnHelper.accessor(row => row.basket, {
+    id: 'Basket',
+    cell: info => info.getValue(),
+    header: () => 'Basket',
+  }),
+  columnHelper.accessor(row => row.MTM, {
+    id: 'MTM',
+    cell: info => info.getValue(),
+    header: () => 'MTM',
+  }),
+]
 const combined_trades_xts = [
   columnHelper.accessor(row => row.trade_id, {
     id: 'trade_id',
@@ -1352,8 +1390,12 @@ const combined_trades_xts = [
   }),
 ]
 
-
+const strategyData = ref({})
+const strategy_chart_data = ref({})
+const basketData = ref({})
+const basket_chart_data = ref({})
 const selectedUids = ref([]);
+const selectedSignalPositions = ref([])
 const selectedBasketItems = ref([]);
 
 const filteredBasketOptions = computed(() => basket.value.filter(o => !selectedBasketItems.value.includes(o)));
@@ -1380,12 +1422,22 @@ const filteredSignalBookData = computed(() => {
     return basketMatch && uidMatch;
   });
 });
+
+
+
+
+
 let eventSource = null
 const client_BackendData = ref([])
 const connection_BackendData = ref([])
 const date = ref()
 const data = ref([])
-const user_infected = ref([])
+const basket_latency = ref([])
+const basket_max_latency = ref([])
+const strategy_latency = ref([])
+const strategy_max_latency = ref([])
+const past_time_strategy = ref(0)
+const past_time_basket = ref(0)
 const client_latency = ref(0)
 const client_details_Latency = ref(0)
 const past_time_client = ref(0)
@@ -1393,6 +1445,7 @@ const past_time_clientDetails = ref(0)
 const max_client_details_latency = ref(0)
 const max_client_latency = ref(0)
 const mix_real_ideal_mtm_table = ref({})
+const signal_position_tables = ref({})
 const book = ref([])
 const position_sum = ref(0)
 const handleColumnClick = ({ item, index }) => {
@@ -1403,6 +1456,7 @@ const handleMessage = (message) => {
     if (message.client_data === undefined) return;
     client_BackendData.value = message.client_data
     let result = client_BackendData.value.find(client => client.name === name.value);
+    signal_position_tables.value = result.signalPosition
     broker.value = result.broker;
     if (result) {
       user_data.value = result;
@@ -1436,13 +1490,13 @@ const handleMessage = (message) => {
 }
 const router = useRouter();
 const LagPageHandler = () => {
-  console.log("hello")
   let str = '/user/lag/' + name.value;
   router.push(str);
 
 }
 const connectToSSE = () => {
-  const socket = new WebSocket('wss://api.swancapital.in/ws');
+  const socket = new WebSocket('wss://production.swancapital.in/ws');
+
   socket.onmessage = (event) => {
     if (event.data === 'ping') {
       socket.send('pong')
@@ -1472,8 +1526,140 @@ const connectToSSE = () => {
     console.error('WebSocket error:', error)
   }
 };
+
+
+const connectStrategyWebSocket = () => {
+  const clientStrategySocket = new WebSocket('wss://production.swancapital.in/chart/strategy');
+
+  clientStrategySocket.onopen = function (e) {
+    console.log("Strategy connection established");
+    // Send the initial set of client data
+    sendClientDetails();
+  };
+
+  clientStrategySocket.onmessage = function (event) {
+    const data = JSON.parse(event.data);
+    let ar2 = data["time"];
+    if (past_time_strategy.value === 0) past_time_strategy.value = ar2;
+    if (past_time_strategy.value != 0) {
+      let date1 = new Date(past_time_strategy.value.replace(/(\d{2})-(\d{2})-(\d{4})/, '$3-$2-$1'));
+      let date2 = new Date(ar2.replace(/(\d{2})-(\d{2})-(\d{4})/, '$3-$2-$1'));
+      let diffInMs = date2 - date1;
+      let diffInSeconds = diffInMs / 1000;
+      strategy_latency.value = diffInSeconds;
+      strategy_max_latency.value = Math.max(strategy_max_latency.value, strategy_latency.value)
+      past_time_strategy.value = ar2;
+    }
+    strategyData.value = data
+    if (data.live) {
+      strategy_chart_data.value = data.live;
+    }
+
+    else {
+      const gg = strategy_chart_data.value
+      for (const i in data.last) {
+        if (gg[i].length != 0) {
+          const last_data = gg[i][gg[i].length - 1].time;
+          if (last_data != data.last[i].time) {
+            gg[i].push(data.last[i])
+          }
+        }
+      }
+      strategy_chart_data.value = gg;
+    }
+
+  };
+  clientStrategySocket.onerror = function (error) {
+    console.log(`WebSocket error: ${error.message}`);
+  };
+  clientStrategySocket.onclose = function (event) {
+    console.log('Client Detail WebSocket connection closed:', event.reason);
+  };
+  function sendClientDetails() {
+    if (clientStrategySocket && clientStrategySocket.readyState === WebSocket.OPEN) {
+      let client_data = {
+        "name": name.value,
+        "basket": ['ALL']
+      };
+      clientStrategySocket.send(JSON.stringify(client_data));
+    } else {
+      console.log("WebSocket is not open. Unable to send message.");
+    }
+  }
+  return clientStrategySocket;
+};
+
+
+const connectBasketWebSocket = () => {
+  const clientBasketSocket = new WebSocket('wss://production.swancapital.in/chart/basket');
+  clientBasketSocket.onopen = function (e) {
+    console.log("Basket connection established");
+    // Send the initial set of client data
+    sendClientDetails();
+  };
+
+  clientBasketSocket.onmessage = function (event) {
+    const data = JSON.parse(event.data);
+    let ar2 = data["time"];
+    if (past_time_basket.value === 0) past_time_basket.value = ar2;
+    if (past_time_basket.value != 0) {
+      let date1 = new Date(past_time_basket.value.replace(/(\d{2})-(\d{2})-(\d{4})/, '$3-$2-$1'));
+      let date2 = new Date(ar2.replace(/(\d{2})-(\d{2})-(\d{4})/, '$3-$2-$1'));
+      let diffInMs = date2 - date1;
+      let diffInSeconds = diffInMs / 1000;
+      basket_latency.value = diffInSeconds;
+      basket_max_latency.value = Math.max(basket_max_latency.value, basket_latency.value)
+      past_time_basket.value = ar2;
+    }
+    basketData.value = data
+    if (data.live) {
+      basket_chart_data.value = data.live;
+    }
+
+    else {
+      const gg = basket_chart_data.value
+      for (const i in data.last) {
+        if (gg[i].length != 0) {
+          const last_data = gg[i][gg[i].length - 1].time;
+          if (last_data != data.last[i].time) {
+            gg[i].push(data.last[i])
+          }
+        }
+      }
+      basket_chart_data.value = gg;
+    }
+
+  };
+  clientBasketSocket.onerror = function (error) {
+    console.log(`WebSocket error: ${error.message}`);
+  };
+  clientBasketSocket.onclose = function (event) {
+    console.log('Client Detail WebSocket connection closed:', event.reason);
+  };
+  function sendClientDetails() {
+    if (clientBasketSocket && clientBasketSocket.readyState === WebSocket.OPEN) {
+      let client_data = {
+        "name": name.value,
+        "basket": ['ALL']
+      };
+      clientBasketSocket.send(JSON.stringify(client_data));
+    } else {
+      console.log("WebSocket is not open. Unable to send message.");
+    }
+  }
+
+  return clientBasketSocket;
+};
+
+
+
+
+
+
+
+
 const connectClientDetailsWebSocket = () => {
-  const clientDetailSocket = new WebSocket('wss://api.swancapital.in/clientdetails');
+  const clientDetailSocket = new WebSocket('wss://production.swancapital.in/clientdetails');
   clientDetailSocket.onopen = function (e) {
     console.log("Client details connection established");
     // Send the initial set of client data
@@ -1501,11 +1687,12 @@ const connectClientDetailsWebSocket = () => {
     }
     if (data.table_data) {
       book.value = Object.values(data.table_data);
-      if (showOnPage.value === 'Combined DF')
+      if (showOnPage.value === 'Combined DF') {
         histogram.value = book.value.map(item => item.signal_lag);
-
-      uids.value = [...new Set(book.value.map(item => item.uid))];
-      basket.value = [...new Set(book.value.map(item => item.uid.split('_')[0]))];
+        histogram_order_fill_lag.value = book.value.map(item => item.order_fill_lag)
+        uids.value = [...new Set(book.value.map(item => item.uid))];
+        basket.value = [...new Set(book.value.map(item => item.uid.split('_')[0]))];
+      }
 
     } else {
       book.value = [];
@@ -1541,6 +1728,8 @@ onMounted(() => {
   connectToSSE();
   name.value = route.params.username;
   connectClientDetailsWebSocket();
+  connectBasketWebSocket();
+  connectStrategyWebSocket();
 })
 onUnmounted(() => {
   if (eventSource) {
@@ -1556,23 +1745,24 @@ watch(selectedBasketItems, (newSelectedBasketItems) => {
 </script>
 <template>
   <div class="px-8 py-8 pageContainer">
-    <!-- <TableOriginal /> -->
-    <!-- <TableTanstack :data="people" :columns="columnsPeople" />
-<div class="my-8">
-<TableTanstack :data="cars" :columns="columnsCars" />
-</div> -->
+
     <div class="heading-container">
       <p class="table-heading LagButton" @click="LagPageHandler()">Lags </p>
     </div>
 
     <div class="my-8">
-      <p class="table-heading">Account Details </p>
-      <TanStackTestTable :data="data" :columns="columns" :hasColor="['IdealMTM', 'Day_PL', 'Friction']" :navigateTo="[]"
-        :showPagination=false :hasRowcolor="{ 'columnName': 'AccountName', 'arrayValues': [] }" />
+      <TanStackTestTable title="Account Details" :data="data" :columns="columns"
+        :hasColor="['IdealMTM', 'Day_PL', 'Friction']" :navigateTo="[]" :showPagination=false
+        :hasRowcolor="{ 'columnName': 'AccountName', 'arrayValues': [] }" />
     </div>
     <!--  <input type="date" v-model="date" /> -->
 
-    <LightWeightChart v-if="user_data['MTMTable']" :Chartdata="mix_real_ideal_mtm_table" />
+    <div class="chartContainer">
+      <p class="table-heading">MTM AND IDEAL MTM</p>
+      <LightWeightChart v-if="user_data['MTMTable']" :Chartdata="mix_real_ideal_mtm_table" />
+    </div>
+
+
 
     <!--  <BarChart v-if="user_data['Live_Client_Positions']" :chartData='user_data["Live_Client_Positions"]' /> -->
     <div class="LatencyTable">
@@ -1580,87 +1770,105 @@ watch(selectedBasketItems, (newSelectedBasketItems) => {
       <p> Max Client :<span class="latencyvalue">{{ max_client_latency }}</span></p>
       <p> Client Detail Latency: <span class="latencyvalue">{{ client_details_Latency }}</span></p>
       <p> Max Client Detail Latency :<span class="latencyvalue"> {{ max_client_details_latency }}</span></p>
+      <p> Basket Detail Latency :<span class="latencyvalue"> {{ basket_latency }}</span></p>
+      <p> Max Basket Latency :<span class="latencyvalue"> {{ basket_max_latency }}</span></p>
+      <p> Strategy Detail Latency :<span class="latencyvalue"> {{ strategy_latency }}</span></p>
+      <p> Max Strategy Latency :<span class="latencyvalue"> {{ strategy_max_latency }}</span></p>
     </div>
     <div class="navContainer">
       <NavBar :navColumns="['Positions', 'Order', 'TradeBook', 'Combined DF', 'Combined Orders', 'Combined Trades']"
         @column-clicked="handleColumnClick" :colorColumns="[]" />
     </div>
     <div class="selectContainer" v-if="book && showOnPage === 'Combined DF' && filteredSignalBookData.length">
-
       <a-select v-model:value="selectedBasketItems" mode="multiple" placeholder="Select Basket Items"
         style="width: 100%; margin-bottom: 10px;"
         :options="filteredBasketOptions.map(item => ({ value: item }))"></a-select>
-
       <a-select v-model:value="selectedUids" mode="multiple" placeholder="Select UIDs" style="width: 100%"
         :options="filteredOptions.map(item => ({ value: item }))"></a-select>
     </div>
 
-    <div class="my-8" v-if="book && showOnPage === 'Positions'">
 
+    <div class="my-8" v-if="book && showOnPage === 'Positions'">
       <p class="table-heading">Live MTM : <span :class="position_sum > 0 ? 'green' : 'red'">{{ position_sum }}</span>
       </p>
-      <TanStackTestTable :data="book" :columns="rms_df_columns" :hasColor="['pnl']" :navigateTo="[]"
-        :showPagination=true />
-    </div>
-    <div class="my-8" v-if="book && showOnPage === 'TradeBook' && broker === 'xts'">
-      <p class="table-heading">Complete Trade Book XTS</p>
-      <TanStackTestTable :data="book" :columns="live_trade_book_columns_xts" :hasColor="[]" :navigateTo="[]"
-        :showPagination=true />
-    </div>
-    <div class="my-8" v-if="book && showOnPage === 'TradeBook' && broker === 'zerodha'">
-      <p class="table-heading">Complete Trade Book Zerodha</p>
-      <TanStackTestTable :data="book" :columns="live_trade_book_columns_zerodha" :hasColor="[]" :navigateTo="[]"
+      <TanStackTestTable title="Position" :data="book" :columns="rms_df_columns" :hasColor="['pnl']" :navigateTo="[]"
         :showPagination=true />
     </div>
 
-    <div class="my-8" v-if="book && showOnPage === 'Order' && broker === 'xts'">
-      <p class="table-heading">Complete Order Book XTS</p>
-      <TanStackTestTable :data="book" :columns="live_order_book_columns_xts" :hasColor="[]" :navigateTo="[]"
-        :showPagination=true />
-    </div>
-    <div class="my-8" v-if="book && showOnPage === 'Order' && broker === 'zerodha'">
-      <p class="table-heading">Complete Order Book Zerodha</p>
-      <TanStackTestTable :data="book" :columns="live_order_book_columns_zerodha" :hasColor="[]" :navigateTo="[]"
-        :showPagination=true />
-    </div>
-    <div class="my-8" v-if="book && showOnPage === 'Combined DF' && broker === 'xts' && filteredSignalBookData.length">
-
-      <p class="table-heading">Combined DF XTS</p>
-      <TanStackTestTable :data="filteredSignalBookData" :columns="combined_df_columns_xts" :hasColor="[]"
-        :navigateTo="[]" :showPagination=true />
-
-    </div>
-    <div class="my-8"
-      v-if="book && showOnPage === 'Combined DF' && broker === 'zerodha' && filteredSignalBookData.length">
-      <p class="table-heading">Combined DF Zerodha</p>
-      <TanStackTestTable :data="filteredSignalBookData" :columns="combined_df_columns_zerodha" :hasColor="[]"
+    <div class="my-8" v-if="book && showOnPage === 'TradeBook'">
+      <TanStackTestTable title="Complete Trade Book" :data="book"
+        :columns="broker === 'xts' ? live_trade_book_columns_xts : live_trade_book_columns_zerodha" :hasColor="[]"
         :navigateTo="[]" :showPagination=true />
     </div>
-    <div class="my-8" v-if="book && showOnPage === 'Combined Orders' && broker === 'xts'">
-      <p class="table-heading">Combined Orders XTS</p>
-      <TanStackTestTable :data="book" :columns="combined_order_xts" :hasColor="[]" :navigateTo="[]"
-        :showPagination=true />
+
+    <div class="my-8" v-if="book && showOnPage === 'Order'">
+      <TanStackTestTable title="Complete Order Book" :data="book"
+        :columns="broker === 'xts' ? live_order_book_columns_xts : live_order_book_columns_zerodha" :hasColor="[]"
+        :navigateTo="[]" :showPagination=true />
     </div>
-    <div class="my-8" v-if="book && showOnPage === 'Combined Orders' && broker === 'zerodha'">
-      <p class="table-heading">Combined Orders Zerodha</p>
-      <TanStackTestTable :data="book" :columns="combined_order_zerodha" :hasColor="[]" :navigateTo="[]"
+
+    <div class="my-8" v-if="book && showOnPage === 'Combined DF' && filteredSignalBookData.length">
+      <TanStackTestTable title="Combined DF" :data="filteredSignalBookData"
+        :columns="broker === 'xts' ? combined_df_columns_xts : combined_df_columns_zerodha" :hasColor="[]"
+        :navigateTo="[]" :showPagination=true />
+    </div>
+
+    <div class="my-8" v-if="book && showOnPage === 'Combined Orders'">
+      <TanStackTestTable title="Combined Orders" :data="book"
+        :columns="broker === 'xts' ? combined_order_xts : combined_order_zerodha" :hasColor="[]" :navigateTo="[]"
         :showPagination=true />
     </div>
 
-    <div class="my-8" v-if="book && showOnPage === 'Combined Trades' && broker === 'xts'">
-      <p class="table-heading">Combined Trades XTS</p>
-      <TanStackTestTable :data="book" :columns="combined_trades_xts" :hasColor="[]" :navigateTo="[]"
+    <div class="my-8" v-if="book && showOnPage === 'Combined Trades'">
+      <TanStackTestTable title="Combined Trades" :data="book"
+        :columns="broker === 'xts' ? combined_trades_xts : combined_trades_zerodha" :hasColor="[]" :navigateTo="[]"
         :showPagination=true />
     </div>
-    <div class="my-8" v-if="book && showOnPage === 'Combined Trades' && broker === 'zerodha'">
-      <p class="table-heading">Combined Trades Zerodha</p>
-      <TanStackTestTable :data="book" :columns="combined_trades_zerodha" :hasColor="[]" :navigateTo="[]"
-        :showPagination=true />
+
+    <div class="signalPosContainer" v-if="signal_position_tables">
+      <p class="table-heading">Signal Positions</p>
+      <div class="multiselectContainer">
+        <a-select v-model:value="selectedSignalPositions" mode="multiple" placeholder="Select Baskets"
+          style="width: 100%" :options="Object.keys(signal_position_tables).map(item => ({ value: item }))"></a-select>
+      </div>
+      <div v-for=" (basket, index) in signal_position_tables" :key="index">
+        <div class="my-8" v-if="selectedSignalPositions.includes(index)">
+          <TanStackTestTable :title="index" :data="basket" :columns="signal_position" :hasColor="['IdealQuantity']"
+            :navigateTo="[]" :showPagination=true />
+        </div>
+      </div>
     </div>
+
+
+    <div class="chartContainer">
+      <p class="table-heading">BASKET WISE IDEAL MTM</p>
+      <LightWeightChart v-if="Object.keys(basket_chart_data).length > 0" :Chartdata="basket_chart_data" />
+    </div>
+
+    <div class="chartContainer">
+      <p class="table-heading">Strategy WISE IDEAL MTM</p>
+      <LightWeightChart v-if="Object.keys(strategy_chart_data).length > 0" :Chartdata="strategy_chart_data" />
+    </div>
+
+
+    <div class="my-8" v-if="Object.keys(basketData).length > 0">
+      <TanStackTestTable title="Current Basket Ideal MTM" :data="basketData['curr']" :columns="curr_basket_mtm"
+        :hasColor="['MTM']" :navigateTo="[]" :showPagination=true />
+    </div>
+    <div class="my-8" v-if="Object.keys(strategyData).length > 0">
+      <TanStackTestTable title="Current Strategy Ideal MTM" :data="strategyData['curr']" :columns="curr_strategy_mtm"
+        :hasColor="['MTM']" :navigateTo="[]" :showPagination=true />
+    </div>
+    <div v-if="histogram_order_fill_lag.length > 0 && showOnPage === 'Combined DF'" class="histogram-container">
+      <p class="table-heading">Histogram Of Order Fill Lag Combined DF</p>
+      <Histogram :dataArray="histogram_order_fill_lag" />
+    </div>
+
     <div v-if="histogram.length > 0 && showOnPage === 'Combined DF'" class="histogram-container">
-      <p class="table-heading">Histogram Of Combined DF</p>
+      <p class="table-heading">Histogram Of Signal Lag Combined DF</p>
       <Histogram :dataArray="histogram" />
     </div>
+
   </div>
 </template>
 <style scoped>
@@ -1681,14 +1889,37 @@ watch(selectedBasketItems, (newSelectedBasketItems) => {
   align-items: flex-end;
 }
 
+.signalPosContainer {
+  display: flex;
+  width: 100%;
+  flex-wrap: wrap;
+  margin-bottom: 50px;
+}
+
 .red {
   color: red;
+}
+
+.chartContainer {
+  width: 100%;
+  margin-top: 50px;
+}
+
+.multiselectContainer {
+  width: 100%;
+  margin-top: 50px;
+}
+
+p {
+  margin: 0;
+  padding: 0;
 }
 
 .selectContainer {
   display: flex;
   flex-direction: column;
   gap: 20px;
+
   margin-top: 50px;
 }
 

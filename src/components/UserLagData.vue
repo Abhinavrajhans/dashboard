@@ -13,7 +13,6 @@ import {
 import { MyEnum } from '../Enums/Prefix.js';
 import { ref, watch } from 'vue'
 import { useRoute } from 'vue-router';
-import TanStackTestTable from './TanStackTestTable.vue'
 import Chart from './Chart.vue';
 import MultiLineChart from './HighCharts.vue'
 
@@ -36,7 +35,7 @@ const mix_real_ideal_mtm_table = ref({})
 const userLagData = ref({})
 
 const connectClientLagsDataWebSocket = () => {
-    const clientLagDataDetailSocket = new WebSocket('wss://api.swancapital.in/userLagData');
+    const clientLagDataDetailSocket = new WebSocket('wss://production.swancapital.in/userLagData');
 
     clientLagDataDetailSocket.onopen = function (e) {
         console.log("ClientLagData details connection established");
