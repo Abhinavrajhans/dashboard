@@ -1495,7 +1495,7 @@ const LagPageHandler = () => {
 
 }
 const connectToSSE = () => {
-  const socket = new WebSocket('wss://production.swancapital.in/ws');
+  const socket = new WebSocket('wss://api.swancapital.in/ws');
 
   socket.onmessage = (event) => {
     if (event.data === 'ping') {
@@ -1529,7 +1529,7 @@ const connectToSSE = () => {
 
 
 const connectStrategyWebSocket = () => {
-  const clientStrategySocket = new WebSocket('wss://production.swancapital.in/chart/strategy');
+  const clientStrategySocket = new WebSocket('wss://api.swancapital.in/chart/strategy');
 
   clientStrategySocket.onopen = function (e) {
     console.log("Strategy connection established");
@@ -1591,7 +1591,7 @@ const connectStrategyWebSocket = () => {
 
 
 const connectBasketWebSocket = () => {
-  const clientBasketSocket = new WebSocket('wss://production.swancapital.in/chart/basket');
+  const clientBasketSocket = new WebSocket('wss://api.swancapital.in/chart/basket');
   clientBasketSocket.onopen = function (e) {
     console.log("Basket connection established");
     // Send the initial set of client data
@@ -1659,7 +1659,7 @@ const connectBasketWebSocket = () => {
 
 
 const connectClientDetailsWebSocket = () => {
-  const clientDetailSocket = new WebSocket('wss://production.swancapital.in/clientdetails');
+  const clientDetailSocket = new WebSocket('wss://api.swancapital.in/clientdetails');
   clientDetailSocket.onopen = function (e) {
     console.log("Client details connection established");
     // Send the initial set of client data
