@@ -18,7 +18,7 @@ const signal_delay = ref([])
 
 
 const connectClientDetailsWebSocket = () => {
-    const clientDetailSocket = new WebSocket('wss://production.swancapital.in/lagsData');
+    const clientDetailSocket = new WebSocket('wss://api.swancapital.inlagsData');
 
     clientDetailSocket.onopen = function (e) {
         console.log("Client details connection established");

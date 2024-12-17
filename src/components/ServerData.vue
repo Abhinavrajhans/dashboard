@@ -25,7 +25,7 @@ const mix_real_ideal_mtm_table = ref({})
 const serverData = ref({})
 
 const connectServerDataWebSocket = () => {
-    const ServerDataSocket = new WebSocket('wss://production.swancapital.in/serverData');
+    const ServerDataSocket = new WebSocket('wss://api.swancapital.inserverData');
 
     ServerDataSocket.onopen = function (e) {
         console.log("ServerDataSocket details connection established");
