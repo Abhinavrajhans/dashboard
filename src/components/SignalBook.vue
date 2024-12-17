@@ -144,7 +144,7 @@ const filteredSignalBookData = computed(() => {
 
 
 const connectClientDetailsWebSocket = () => {
-    const clientDetailSocket = new WebSocket('wss://api.swancapital.insignalbook');
+    const clientDetailSocket = new WebSocket('wss://api.swancapital.in/signalbook');
 
     clientDetailSocket.onopen = function (e) {
         console.log("Client details connection established");
