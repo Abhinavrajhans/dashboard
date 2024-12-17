@@ -197,15 +197,6 @@ const columns = [
 const client_BackendData = ref({})
 const connection_BackendData = ref({})
 const index_data = ref({})
-<<<<<<< HEAD
-const previous_day_close_index_data = {
-  BANKNIFTYSPOT: 51400.25,
-  FINNIFTYSPOT: 23834.05,
-  MIDCPNIFTYSPOT: 13218.25,
-  NIFTYSPOT: 25198.70,
-  SENSEXSPOT: 82352.64
-}
-=======
 const previous_day_close_index_data = ref({
   BANKNIFTYSPOT: 51117.80,
   FINNIFTYSPOT: 23722.15,
@@ -213,7 +204,6 @@ const previous_day_close_index_data = ref({
   NIFTYSPOT: 24936.40,
   SENSEXSPOT: 81559.54
 })
->>>>>>> production
 const pulse_signal = ref([])
 const time = ref([])
 const serverData = ref({})
@@ -291,7 +281,7 @@ const updateData = () => {
 
 
 const connectServerDataWebSocket = () => {
-  const socket = new WebSocket('wss://api.swancapital.in/serverData');
+  const socket = new WebSocket('wss://production.swancapital.in/serverData');
 
   socket.onopen = () => {
     console.log('ServerData WebSocket connection opened')
@@ -332,7 +322,7 @@ const connectServerDataWebSocket = () => {
 }
 
 const connectWebSocket = () => {
-  const socket = new WebSocket('wss://api.swancapital.in/ws');
+  const socket = new WebSocket('wss://production.swancapital.in/ws');
 
   socket.onopen = () => {
     console.log('WebSocket connection opened')
