@@ -99,6 +99,22 @@ const table = useVueTable({
 const pageCount = ref(0)
 const rows = ref([])
 
+// Add this after the existing imports
+// Add after imports
+const formatIndianNumber = (value) => {
+    if (value === null || value === undefined || value === '') return value;
+    const num = Number(value);
+    if (isNaN(num)) return value;
+
+    const [integerPart, decimalPart] = num.toString().split('.');
+    const lastThree = integerPart.slice(-3);
+    const remaining = integerPart.slice(0, -3);
+    const withCommas = remaining ?
+        remaining.replace(/\B(?=(\d{2})+(?!\d))/g, ',') + ',' + lastThree :
+        lastThree;
+
+    return decimalPart ? `${withCommas}.${decimalPart}` : withCommas;
+}
 watchEffect(() => {
     const filteredRows = table.getFilteredRowModel().rows
     const sortedRows = table.getSortedRowModel().rows
@@ -159,7 +175,7 @@ onUnmounted(() => {
         <div class="px-4 sm:px-6 lg:px-8 pb-8 bg-white drop-shadow-sm">
 
             <div class="mt-8 flow-root">
-                <div class="my-4">
+                <div class="my-4 headingContainer">
                     <input type="text" class="border border-gray-400 rounded px-2 py-2" placeholder="Search"
                         v-model="filter" v-if="showPagination" />
                     <button @click="download('csv')"
@@ -179,7 +195,7 @@ onUnmounted(() => {
                             <thead>
                                 <tr v-for="headerGroup in table.getHeaderGroups()" :key="headerGroup.id">
                                     <th v-for="header in headerGroup.headers" :key="header.id" scope="col"
-                                        class="whitespace-nowrap px-3 py-3.5 text-left text-sm font-semibold text-gray-900 borderright"
+                                        class="whitespace-nowrap px-3 py-3.5 text-left text-sm font-semibold text-gray-900 borderright textcenter"
                                         :class="{
                                             'cursor-pointer select-none': header.column.getCanSort(),
                                             'sticky-header': header.index === 0,
@@ -193,19 +209,18 @@ onUnmounted(() => {
                             <tbody class="divide-y divide-gray-200">
                                 <tr v-for="row in rows" :key="row.id">
                                     <td v-for="(cell, index) in row.getVisibleCells()" :key="cell.id"
-                                        class="maxwidth150 break-words whitespace-normal px-3 py-4 text-sm text-black-600"
+                                        class="maxwidth150 break-words whitespace-normal px-3 py-4 text-sm text-black-600 textcenter"
                                         :class="{
                                             'sticky-column': index === 0,
                                             'red': cell.getValue() < 0 && hasColor.includes(cell.id.split('_').slice(1).join('_')),
                                             'green': cell.getValue() > 0 && hasColor.includes(cell.id.split('_').slice(1).join('_')),
                                             'cursorpointer': tellnav(cell)
-                                            // 'redbackground': hasRowcolor && hasRowcolor.arrayValues.includes(cell.row.original[hasRowcolor.columnName]),
-                                            // 'greenbackground': hasRowcolor && !(hasRowcolor.arrayValues.includes(cell.row.original[hasRowcolor.columnName]))
                                         }" @click="checkNavigate(cell)">
                                         <template v-if="cell.getValue() !== undefined">
-                                            <FlexRender :render="cell.column.columnDef.cell"
-                                                :props="cell.getContext()" />
+                                            {{ typeof cell.getValue() === 'number' ? formatIndianNumber(cell.getValue())
+                                            : cell.getValue() }}
                                         </template>
+
                                         <template v-else>
                                             N/A
                                         </template>
@@ -284,6 +299,10 @@ onUnmounted(() => {
     color: red;
 }
 
+.textcenter {
+    text-align: center;
+}
+
 .table-heading {
     font-size: 22px;
     font-weight: 600;
@@ -355,6 +374,13 @@ table {
     position: sticky;
     left: 0;
     z-index: 1;
+}
+
+.headingContainer {
+    display: flex;
+    gap: 10px;
+    align-content: flex-end;
+
 }
 
 .sticky-column:nth-child(1) {

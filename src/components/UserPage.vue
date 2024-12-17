@@ -218,6 +218,28 @@ columnHelper.accessor(row => row.status_message, {
   header: () => 'status_message',
 }),
 ]
+const fund_summary_columns = [
+  columnHelper.accessor(row => row.Date, {
+    id: 'Date',
+    cell: info => info.getValue(),
+    header: () => 'Date',
+  }),
+  columnHelper.accessor(row => row['Actual MTM'], {
+    id: 'Actual MTM',
+    cell: info => info.getValue(),
+    header: () => 'Actual MTM',
+  }),
+  columnHelper.accessor(row => row['Ideal MTM'], {
+    id: 'Ideal MTM',
+    cell: info => info.getValue(),
+    header: () => 'Ideal MTM',
+  }),
+  columnHelper.accessor(row => row['Peak Margin'], {
+    id: 'Peak Margin',
+    cell: info => info.getValue(),
+    header: () => 'Peak Margin',
+  })
+]
 const live_order_book_columns_xts = [
   columnHelper.accessor(row => row.OrderGeneratedDateTime, {
     id: 'OrderGeneratedDateTime',
@@ -243,6 +265,16 @@ const live_order_book_columns_xts = [
     id: 'OrderAverageTradedPrice',
     cell: info => info.getValue(),
     header: () => 'OrderAverageTradedPrice',
+  }),
+  columnHelper.accessor(row => row.CumulativeQuantity, {
+    id: 'CumulativeQuantity',
+    cell: info => info.getValue(),
+    header: () => 'CumulativeQuantity',
+  }),
+  columnHelper.accessor(row => row.AppOrderID, {
+    id: 'AppOrderID',
+    cell: info => info.getValue(),
+    header: () => 'AppOrderID',
   }),
   columnHelper.accessor(row => row.OrderSide, {
     id: 'OrderSide',
@@ -300,10 +332,27 @@ const columns = [
     cell: info => info.getValue(),
     header: () => 'Day_PL',
   }),
-  columnHelper.accessor(row => row.Friction, {
-    id: 'Friction',
+  columnHelper.accessor(row => row.PNL_PER_UM, {
+    id: 'PNL_PER_UM',
+    cell: info => {
+      const value = info.getValue(); // Get the value
+      return (typeof value === 'number' ? value : Number(value)).toFixed(2) + "%"; // Ensure it's a number and format
+    },
+    header: () => 'PNL Utilized %',
+  }),
+  columnHelper.accessor(row => row.PNL_PER_M, {
+    id: 'PNL_PER_M',
+    cell: info => {
+      const value = info.getValue(); // Get the value
+      return (typeof value === 'number' ? value : Number(value)).toFixed(2) + "%"; // Ensure it's a number and format
+    },
+    header: () => 'PNL Overall %',
+  }),
+
+  columnHelper.accessor(row => row.Slippage, {
+    id: 'Slippage',
     cell: info => info.getValue(),
-    header: () => 'Friction',
+    header: () => 'Slippage',
   }),
   columnHelper.accessor(row => row.Ideal_Margin, {
     id: 'Ideal Margin',
@@ -312,14 +361,32 @@ const columns = [
   }),
   columnHelper.accessor(row => row.VAR, {
     id: 'VAR',
-    cell: info => info.getValue(),
+    cell: info => {
+      const value = info.getValue(); // Get the value
+      return (typeof value === 'number' ? value : Number(value)).toFixed(2); // Ensure it's a number and format
+    },
     header: () => 'VAR \u20B9',
   }),
   columnHelper.accessor(row => row.VAR_PERCENTAGE, {
     id: 'VAR %',
-    cell: info => info.getValue() + "%",
+    cell: info => {
+      const value = info.getValue(); // Get the value
+      return (typeof value === 'number' ? value : Number(value)).toFixed(2) + "%"; // Ensure it's a number and format
+    },
     header: () => 'VAR %',
   }),
+
+  columnHelper.accessor(row => row.Peak_Margin, {
+    id: 'Peak_Margin',
+    cell: info => info.getValue(),
+    header: () => 'Peak Margin',
+  }),
+  columnHelper.accessor(row => row.Margin, {
+    id: ' Margin',
+    cell: info => info.getValue(),
+    header: () => 'Margin',
+  }),
+
   columnHelper.accessor(row => row.Used_Margin, {
     id: 'Used_Margin',
     cell: info => info.getValue(),
@@ -329,6 +396,16 @@ const columns = [
     id: 'AvailableMargin',
     cell: info => info.getValue(),
     header: () => 'AvailableMargin',
+  }),
+  columnHelper.accessor(row => row.Slippage1, {
+    id: 'Slippage1',
+    cell: info => info.getValue(),
+    header: () => 'Ideal Slippage 0.5 MTM',
+  }),
+  columnHelper.accessor(row => row.Slippage2 ,{
+    id: 'Slippage2',
+    cell: info => info.getValue(),
+    header: () => 'Ideal Slippage 1 MTM',
   }),
   columnHelper.accessor(row => row.Cash, {
     id: 'Cash',
@@ -344,6 +421,16 @@ const columns = [
     id: 'OpenQuantity',
     cell: info => info.getValue(),
     header: () => 'OpenQuantity',
+  }),
+  columnHelper.accessor(row => row.openOrderCount, {
+    id: 'OpenOrderCount',
+    cell: info => info.getValue(),
+    header: () => 'OpenOrderCount',
+  }),
+  columnHelper.accessor(row => row.CompleteOrderCount, {
+    id: 'CompleteOrderCount',
+    cell: info => info.getValue(),
+    header: () => 'CompleteOrderCount',
   }),
   columnHelper.accessor(row => row.RejectedOrderCount, {
     id: 'RejectedOrderCount',
@@ -370,21 +457,13 @@ const columns = [
     cell: info => info.getValue(),
     header: () => 'HoldingsDayPL',
   }),
+
   columnHelper.accessor(row => row.TotalOrderCount, {
     id: 'TotalOrderCount',
     cell: info => info.getValue(),
     header: () => 'TotalOrderCount',
   }),
-  columnHelper.accessor(row => row.OpenOrderCount, {
-    id: 'OpenOrderCount',
-    cell: info => info.getValue(),
-    header: () => 'OpenOrderCount',
-  }),
-  columnHelper.accessor(row => row.CompleteOrderCount, {
-    id: 'CompleteOrderCount',
-    cell: info => info.getValue(),
-    header: () => 'CompleteOrderCount',
-  }),
+
   columnHelper.accessor(row => row.PositionsCount, {
     id: 'PositionsCount',
     cell: info => info.getValue(),
@@ -395,6 +474,7 @@ const columns = [
     cell: info => info.getValue(),
     header: () => 'HoldingsCount',
   }),
+
 ]
 const combined_df_columns_zerodha = [
   columnHelper.accessor(row => row.system_tag, {
@@ -1462,11 +1542,15 @@ const handleMessage = (message) => {
       user_data.value = result;
       data.value = [{
         AccountName: result.name || '',
-        IdealMTM: result.ideal_MTM !== undefined ? Number(result.ideal_MTM) : 0,
-        Day_PL: result.MTM !== undefined ? Number(result.MTM) : 0,
-        Friction: result.MTM !== undefined && result.ideal_MTM !== undefined
-          ? (Number(result.MTM) - Number(result.ideal_MTM)).toFixed(2)
-          : '0.00',
+        IdealMTM: result.ideal_MTM !== undefined ? result.ideal_MTM : 0,
+        Day_PL: result.MTM !== undefined ? result.MTM : 0,
+        PNL_PER_UM: result['PNL Utilized %'] !== undefined ? Number(result['PNL Utilized %']) : 0,
+        PNL_PER_M: result['PNL Overall %'] !== undefined ? Number(result['PNL Overall %']) : 0,
+        Peak_Margin: result['Peak Margin'] !== undefined ? result['Peak Margin'] : 0,
+        Slippage: result.Slippage !== undefined ? result.Slippage : 0,
+        Margin: result['Total Margin'] !== undefined ? result['Total Margin'] : 0, //item.Total Margin',
+        CompleteOrderCount: result.CompleteOrderCount !== undefined ? Number(result.CompleteOrderCount) : 0,
+        openOrderCount: result.openOrderCount !== undefined ? Number(result.openOrderCount) : 0,
         RejectedOrderCount: result.Rejected_orders !== undefined ? Number(result.Rejected_orders) : 0,
         PendingOrderCount: result.Pending_orders !== undefined ? Number(result.Pending_orders) : 0,
         OpenQuantity: result.OpenQuantity !== undefined ? Number(result.OpenQuantity) : 0,
@@ -1475,11 +1559,13 @@ const handleMessage = (message) => {
         VAR: result.Live_Client_Var !== undefined ? Number(result.Live_Client_Var) : 0,
         Cash: result.cashAvailable !== undefined ? Number(result.cashAvailable) : 0,
         AvailableMargin: result.availableMargin !== undefined ? Number(result.availableMargin) : 0,
-        Used_Margin: result.marginUtilized !== undefined ? Number(result.marginUtilized) : 0,
-        VAR_PERCENTAGE: result.Live_Client_Var !== undefined && (result.availableMargin > 0) ? ((Number(result.Live_Client_Var) / Number(result.availableMargin)) * 100).toPrecision(4) : 0,
+        Slippage1: result.Slippage1!==undefined? result.Slippage1:0,
+        Slippage2: result.Slippage2!==undefined? result.Slippage2:0,
+        Used_Margin: result.marginUtilized !== undefined ? result.marginUtilized : 0,
+        VAR_PERCENTAGE: result.Live_Client_Var !== undefined && (result['Total Margin'] > 0) ? ((Number(result.Live_Client_Var) / result['Total Margin']) * 100).toPrecision(4) : 0,
       }];
       mix_real_ideal_mtm_table.value = { "real": result['MTMTable'], "ideal": result['ideal_MTMTable'] }
-      position_sum.value = result.MTM !== undefined ? Number(result.MTM) : 0
+      position_sum.value = result.MTM !== undefined ? result.MTM : 0
 
     } else {
       console.error('No client data found for the specified name:', name.value);
@@ -1723,6 +1809,31 @@ const connectClientDetailsWebSocket = () => {
   });
   return clientDetailSocket;
 };
+
+
+
+// New refs for selected items
+const selectedStrategies = ref([]);
+const filteredData = computed(() => {
+  if (strategyData.value['curr'] === undefined) return []
+  if (selectedStrategies.value.length === 0) return strategyData.value['curr'];
+  return strategyData.value['curr'].filter(item => selectedStrategies.value.includes(item.UID));
+
+})
+// Computed properties for filtered options
+const filteredStrategyOptions = computed(() => {
+  if (strategyData.value['curr'] === undefined) return [];
+
+  // Get all UIDs from strategyData['curr']
+  const allUIDs = strategyData.value['curr'].map(item => item.UID);
+
+  // Filter out UIDs that are present in selectedStrategies
+  const filteredUIDs = allUIDs.filter(uid => !selectedStrategies.value.includes(uid));
+
+  return filteredUIDs;
+});
+
+
 const showOnPage = ref('Positions')
 onMounted(() => {
   connectToSSE();
@@ -1752,7 +1863,7 @@ watch(selectedBasketItems, (newSelectedBasketItems) => {
 
     <div class="my-8">
       <TanStackTestTable title="Account Details" :data="data" :columns="columns"
-        :hasColor="['IdealMTM', 'Day_PL', 'Friction']" :navigateTo="[]" :showPagination=false
+        :hasColor="['IdealMTM', 'Day_PL', 'Slippage', 'PNL_PER_UM', 'PNL_PER_M','Slippage1','Slippage2']" :navigateTo="[]" :showPagination=false
         :hasRowcolor="{ 'columnName': 'AccountName', 'arrayValues': [] }" />
     </div>
     <!--  <input type="date" v-model="date" /> -->
@@ -1776,7 +1887,8 @@ watch(selectedBasketItems, (newSelectedBasketItems) => {
       <p> Max Strategy Latency :<span class="latencyvalue"> {{ strategy_max_latency }}</span></p>
     </div>
     <div class="navContainer">
-      <NavBar :navColumns="['Positions', 'Order', 'TradeBook', 'Combined DF', 'Combined Orders', 'Combined Trades']"
+      <NavBar
+        :navColumns="['Positions', 'Order', 'TradeBook', 'Combined DF', 'Combined Orders', 'Combined Trades', 'Fund Summary']"
         @column-clicked="handleColumnClick" :colorColumns="[]" />
     </div>
     <div class="selectContainer" v-if="book && showOnPage === 'Combined DF' && filteredSignalBookData.length">
@@ -1806,6 +1918,11 @@ watch(selectedBasketItems, (newSelectedBasketItems) => {
         :columns="broker === 'xts' ? live_order_book_columns_xts : live_order_book_columns_zerodha" :hasColor="[]"
         :navigateTo="[]" :showPagination=true />
     </div>
+    <div class="my-8" v-if="book && showOnPage === 'Fund Summary'">
+      <TanStackTestTable title="Fund Summary" :data="book" :columns="fund_summary_columns"
+        :hasColor="['Actual MTM', 'Ideal MTM']" :navigateTo="[]" :showPagination=true />
+    </div>
+
 
     <div class="my-8" v-if="book && showOnPage === 'Combined DF' && filteredSignalBookData.length">
       <TanStackTestTable title="Combined DF" :data="filteredSignalBookData"
@@ -1855,8 +1972,14 @@ watch(selectedBasketItems, (newSelectedBasketItems) => {
       <TanStackTestTable title="Current Basket Ideal MTM" :data="basketData['curr']" :columns="curr_basket_mtm"
         :hasColor="['MTM']" :navigateTo="[]" :showPagination=true />
     </div>
+
+    <div class="selectContainer">
+      <a-select v-model:value="selectedStrategies" mode="multiple" placeholder="Select Strategies"
+        style="width: 100%; margin-bottom: 10px;"
+        :options="filteredStrategyOptions.map(item => ({ value: item }))"></a-select>
+    </div>
     <div class="my-8" v-if="Object.keys(strategyData).length > 0">
-      <TanStackTestTable title="Current Strategy Ideal MTM" :data="strategyData['curr']" :columns="curr_strategy_mtm"
+      <TanStackTestTable title="Current Strategy Ideal MTM" :data="filteredData" :columns="curr_strategy_mtm"
         :hasColor="['MTM']" :navigateTo="[]" :showPagination=true />
     </div>
     <div v-if="histogram_order_fill_lag.length > 0 && showOnPage === 'Combined DF'" class="histogram-container">

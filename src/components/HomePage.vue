@@ -44,10 +44,28 @@ const columns = [
     cell: info => info.getValue(),
     header: () => 'Day_PL',
   }),
-  columnHelper.accessor(row => row.Friction, {
-    id: 'Friction',
+
+  columnHelper.accessor(row => row.PNL_PER_UM, {
+    id: 'PNL_PER_UM',
+    cell: info => {
+      const value = info.getValue(); // Get the value
+      return (typeof value === 'number' ? value : Number(value)).toFixed(2) + "%"; // Ensure it's a number and format
+    },
+    header: () => 'PNL Utilized %',
+  }),
+  columnHelper.accessor(row => row.PNL_PER_M, {
+    id: 'PNL_PER_M',
+    cell: info => {
+      const value = info.getValue(); // Get the value
+      return (typeof value === 'number' ? value : Number(value)).toFixed(2) + "%"; // Ensure it's a number and format
+    },
+    header: () => 'PNL Overall %',
+  }),
+
+  columnHelper.accessor(row => row.Slippage, {
+    id: 'Slippage',
     cell: info => info.getValue(),
-    header: () => 'Friction',
+    header: () => 'Slippage',
   }),
   columnHelper.accessor(row => row.Ideal_Margin, {
     id: 'Ideal Margin',
@@ -56,14 +74,33 @@ const columns = [
   }),
   columnHelper.accessor(row => row.VAR, {
     id: 'VAR',
-    cell: info => info.getValue(),
+    cell: info => {
+      const value = info.getValue(); // Get the value
+      return (typeof value === 'number' ? value : Number(value)).toFixed(2); // Ensure it's a number and format
+    },
     header: () => 'VAR \u20B9',
   }),
   columnHelper.accessor(row => row.VAR_PERCENTAGE, {
     id: 'VAR %',
-    cell: info => info.getValue() + "%",
+    cell: info => {
+      const value = info.getValue(); // Get the value
+      return (typeof value === 'number' ? value : Number(value)).toFixed(2) + "%"; // Ensure it's a number and format
+    },
     header: () => 'VAR %',
   }),
+
+  columnHelper.accessor(row => row.Peak_Margin, {
+    id: 'Peak_Margin',
+    cell: info => info.getValue(),
+    header: () => 'Peak Margin',
+  }),
+  columnHelper.accessor(row => row.Margin, {
+    id: ' Margin',
+    cell: info => info.getValue(),
+    header: () => 'Margin',
+  }),
+
+
   columnHelper.accessor(row => row.Used_Margin, {
     id: 'Used_Margin',
     cell: info => info.getValue(),
@@ -74,6 +111,17 @@ const columns = [
     cell: info => info.getValue(),
     header: () => 'AvailableMargin',
   }),
+  columnHelper.accessor(row => row.Slippage1, {
+    id: 'Slippage1',
+    cell: info => info.getValue(),
+    header: () => 'Ideal Slippage 0.5 MTM',
+  }),
+  columnHelper.accessor(row => row.Slippage2 ,{
+    id: 'Slippage2',
+    cell: info => info.getValue(),
+    header: () => 'Ideal Slippage 1 MTM',
+  }),
+
   columnHelper.accessor(row => row.Cash, {
     id: 'Cash',
     cell: info => info.getValue(),
@@ -88,6 +136,16 @@ const columns = [
     id: 'OpenQuantity',
     cell: info => info.getValue(),
     header: () => 'OpenQuantity',
+  }),
+  columnHelper.accessor(row => row.openOrderCount, {
+    id: 'OpenOrderCount',
+    cell: info => info.getValue(),
+    header: () => 'OpenOrderCount',
+  }),
+  columnHelper.accessor(row => row.CompleteOrderCount, {
+    id: 'CompleteOrderCount',
+    cell: info => info.getValue(),
+    header: () => 'CompleteOrderCount',
   }),
   columnHelper.accessor(row => row.RejectedOrderCount, {
     id: 'RejectedOrderCount',
@@ -120,16 +178,7 @@ const columns = [
     cell: info => info.getValue(),
     header: () => 'TotalOrderCount',
   }),
-  columnHelper.accessor(row => row.OpenOrderCount, {
-    id: 'OpenOrderCount',
-    cell: info => info.getValue(),
-    header: () => 'OpenOrderCount',
-  }),
-  columnHelper.accessor(row => row.CompleteOrderCount, {
-    id: 'CompleteOrderCount',
-    cell: info => info.getValue(),
-    header: () => 'CompleteOrderCount',
-  }),
+
   columnHelper.accessor(row => row.PositionsCount, {
     id: 'PositionsCount',
     cell: info => info.getValue(),
@@ -148,6 +197,7 @@ const columns = [
 const client_BackendData = ref({})
 const connection_BackendData = ref({})
 const index_data = ref({})
+<<<<<<< HEAD
 const previous_day_close_index_data = {
   BANKNIFTYSPOT: 51400.25,
   FINNIFTYSPOT: 23834.05,
@@ -155,6 +205,15 @@ const previous_day_close_index_data = {
   NIFTYSPOT: 25198.70,
   SENSEXSPOT: 82352.64
 }
+=======
+const previous_day_close_index_data = ref({
+  BANKNIFTYSPOT: 51117.80,
+  FINNIFTYSPOT: 23722.15,
+  MIDCPNIFTYSPOT: 13007.45,
+  NIFTYSPOT: 24936.40,
+  SENSEXSPOT: 81559.54
+})
+>>>>>>> production
 const pulse_signal = ref([])
 const time = ref([])
 const serverData = ref({})
@@ -176,6 +235,8 @@ const give_percentage_change = (a, b) => {
 const handleMessage = (message) => {
   client_BackendData.value = message.client_data
   connection_BackendData.value = message.connection_data
+  if (message.connection_data)
+    previous_day_close_index_data.value = message.connection_data['history_live_index']
   updateData()
 }
 
@@ -200,22 +261,27 @@ const updateData = () => {
 
 
       AccountName: item.name || '',
-      IdealMTM: item.ideal_MTM !== undefined ? Number(item.ideal_MTM) : 0,
-      Day_PL: item.MTM !== undefined ? Number(item.MTM) : 0,
-      Friction: item.MTM !== undefined && item.ideal_MTM !== undefined
-        ? (Number(item.MTM) - Number(item.ideal_MTM)).toFixed(2)
-        : '0.00',
+      IdealMTM: item.ideal_MTM !== undefined ? item.ideal_MTM : 0,
+      Day_PL: item.MTM !== undefined ? item.MTM : 0,
+      Slippage1:item.Slippage1!==undefined?item.Slippage1:0,
+      Slippage2:item.Slippage2!==undefined?item.Slippage2:0,
+      PNL_PER_UM: item['PNL Utilized %'] !== undefined ? Number(item['PNL Utilized %']) : 0,
+      PNL_PER_M: item['PNL Overall %'] !== undefined ? Number(item['PNL Overall %']) : 0,
+      Peak_Margin: item['Peak Margin'] !== undefined ? item['Peak Margin'] : 0,
+      Slippage: item.Slippage !== undefined ? item.Slippage : 0,
+      CompleteOrderCount: item.CompleteOrderCount !== undefined ? Number(item.CompleteOrderCount) : 0,
+      openOrderCount: item.openOrderCount !== undefined ? Number(item.openOrderCount) : 0,
       RejectedOrderCount: item.Rejected_orders !== undefined ? Number(item.Rejected_orders) : 0,
       PendingOrderCount: item.Pending_orders !== undefined ? Number(item.Pending_orders) : 0,
       OpenQuantity: item.OpenQuantity !== undefined ? Number(item.OpenQuantity) : 0,
       NetQuantity: item.NetQuantity !== undefined ? Number(item.NetQuantity) : 0,
       Ideal_Margin: item.Live_Client_Margin !== undefined ? Number(item.Live_Client_Margin) : 0,
-      VAR: item.Live_Client_Var !== undefined ? Number(item.Live_Client_Var) : 0,
+      VAR: item.Live_Client_Var !== undefined ? item.Live_Client_Var : 0,
+      Margin: item['Total Margin'] !== undefined ? item['Total Margin'] : 0, //item.Total Margin',
       Cash: item.cashAvailable !== undefined ? Number(item.cashAvailable) : 0,
       AvailableMargin: item.availableMargin !== undefined ? Number(item.availableMargin) : 0,
-      Used_Margin: item.marginUtilized !== undefined ? Number(item.marginUtilized) : 0,
-      VAR_PERCENTAGE: item.Live_Client_Var !== undefined && (item.availableMargin > 0) ? ((Number(item.Live_Client_Var) / Number(item.availableMargin)) * 100).toPrecision(4) : 0,
-
+      Used_Margin: item.marginUtilized !== undefined ? item.marginUtilized : 0,
+      VAR_PERCENTAGE: item.Live_Client_Var !== undefined && ( item['Total Margin'] > 0) ? ((Number(item.Live_Client_Var) / Number( item['Total Margin'])) * 100).toPrecision(4) : 0,
     }))
   }
 
@@ -321,10 +387,10 @@ const formatNumber = (value) => {
   return val ? val.toLocaleString() : '0'
 }
 const getDifference = (key) => {
-  return (index_data.value[key].toFixed(2) - previous_day_close_index_data[key]).toFixed(2);
+  return (index_data.value[key].toFixed(2) - previous_day_close_index_data.value[key]).toFixed(2);
 }
 const getPercentage = (key) => {
-  const change = give_percentage_change(index_data.value[key], previous_day_close_index_data[key]);
+  const change = give_percentage_change(index_data.value[key], previous_day_close_index_data.value[key]);
   return change.toFixed(2);
 }
 const formatPercentage = (value) => {
@@ -413,8 +479,10 @@ onUnmounted(() => {
       <div class="my-8">
         <!-- <p class="table-heading">Accounts</p> -->
         <TanStackTestTable title="Accounts" :data="data" :columns="columns"
-          :hasColor="['IdealMTM', 'Day_PL', 'Friction']" :navigateTo="NavigationMap" :showPagination=true
-          :hasRowcolor="{ 'columnName': 'AccountName', 'arrayValues': [] }" />
+          :hasColor="['IdealMTM', 'Day_PL', 'Slippage', 'PNL_PER_UM', 'PNL_PER_M','Slippage1','Slippage2']" :navigateTo="NavigationMap"
+          :showPagination=true :hasRowcolor="{ 'columnName': 'AccountName', 'arrayValues': [] }" />
+
+
       </div>
 
     </div>
