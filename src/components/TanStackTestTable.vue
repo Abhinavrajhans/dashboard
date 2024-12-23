@@ -126,6 +126,8 @@ const formatIndianNumber = (value) => {
     // Add back the negative sign if necessary
     return isNegative ? `-${formattedNumber}` : formattedNumber;
 };
+
+
 watchEffect(() => {
     const filteredRows = table.getFilteredRowModel().rows
     const sortedRows = table.getSortedRowModel().rows
