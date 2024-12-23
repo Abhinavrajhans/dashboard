@@ -117,7 +117,7 @@ const updateData = () => {
 
 
 const connectServerDataWebSocket = () => {
-  const socket = new WebSocket('wss://production.swancapital.in/serverData');
+  const socket = new WebSocket('wss://api.swancapital.in/serverData');
 
   socket.onopen = () => {
     console.log('ServerData WebSocket connection opened')
@@ -147,7 +147,7 @@ const connectServerDataWebSocket = () => {
 }
 
 const connectWebSocket = () => {
-  const socket = new WebSocket('wss://production.swancapital.in/ws');
+  const socket = new WebSocket('wss://api.swancapital.in/ws');
 
   socket.onopen = () => {
     console.log('WebSocket connection opened')
