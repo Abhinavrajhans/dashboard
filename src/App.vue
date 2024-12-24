@@ -136,7 +136,7 @@ provide('book', book.value)
 <template>
   <div class="pageLayout">
     <Signup v-if="!isLoggedIn && showloginorSignup" @toggleForm="toggleForm" />
-    <Login v-if="!isLoggedIn && !howloginorSignup" @toggleForm="toggleForm" />
+    <Login v-if="!isLoggedIn && !showloginorSignup" @toggleForm="toggleForm" />
 
 
     <SideBar v-if="isLoggedIn" @State="ChangeSideBarState" class="sideBar" />
