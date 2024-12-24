@@ -57,6 +57,7 @@
     if (data.success) {
       
       localStorage.setItem('isLoggedIn', 'true');
+      alert('Login successful!');
       window.location.reload(); // Refresh the page after login success
     } else {
       alert(data.message);
@@ -80,7 +81,6 @@
       try {
         await loginUser(username.value, password.value);
         // Handle successful login
-        alert('Login successful!');
       } catch (error) {
         alert('Error during login. Please check your credentials.');
       }
