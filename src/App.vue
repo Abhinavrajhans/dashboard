@@ -3,6 +3,9 @@ import { onMounted, ref, provide, watch } from 'vue'
 import { RouterView } from 'vue-router'
 import SideBar from './components/SideBar.vue'
 import Toast from './components/Toast.vue'
+import Login from './components/Login.vue'
+import Signup from './components/Signup.vue'
+
 
 const sideBarState = ref(false)
 const toastConfig = ref({
@@ -26,6 +29,25 @@ const triggerToast = (message, type = 'info') => {
 const hideToast = () => {
   toastConfig.value.show = false
 }
+
+
+const showloginorSignup = ref(false)
+const isLoggedIn = ref(false) // Add a ref to track login state
+
+const toggleForm = () => {
+  showloginorSignup.value = !showloginorSignup.value;
+}
+
+const checkLoginStatus = () => {
+  const userSession = localStorage.getItem('isLoggedIn'); // Check if logged in
+  if (userSession === 'true') {
+    isLoggedIn.value = true;
+  } else {
+    isLoggedIn.value = false;
+  }
+}
+
+
 
 const book = ref({})
 const past_time_client = ref(0)
@@ -99,17 +121,28 @@ const connectToSSE = () => {
 
 onMounted(() => {
   connectToSSE();
+  checkLoginStatus();
 })
 
 provide('triggerToast', triggerToast)
 provide('book', book.value)
+
+
+provide('triggerToast', triggerToast)
+provide('book', book.value)
+
 </script>
 
 <template>
   <div class="pageLayout">
-    <SideBar @State="ChangeSideBarState" class="sideBar" />
+    <Signup v-if="!isLoggedIn && !showloginorSignup" @toggleForm="toggleForm" />
+    <Login v-if="!isLoggedIn && showloginorSignup" @toggleForm="toggleForm" />
+
+
+    <SideBar v-if="isLoggedIn" @State="ChangeSideBarState" class="sideBar" />
     <Toast v-if="toastConfig.show" :message="toastConfig.message" :type="toastConfig.type" @close="hideToast" />
-    <RouterView :class="sideBarState ? 'content' : 'content2'" />
+    <RouterView v-if="isLoggedIn" :class="sideBarState ? 'content' : 'content2'" />
+
   </div>
 </template>
 
