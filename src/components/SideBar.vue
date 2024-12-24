@@ -126,7 +126,7 @@
             </a>
           </li>
           <li>
-            <a href="#">
+            <a href="#" @click="logout">
               <i class="icon ph-bold ph-sign-out"></i>
               <span class="text">Logout</span>
             </a>
@@ -160,6 +160,13 @@ export default {
     }
   },
   methods: {
+    logout() {
+      // Clear the session or localStorage data
+      localStorage.removeItem('isLoggedIn'); // Remove session key
+     
+      alert('You have been logged out.');
+      window.location.reload(); // Refresh the page after login success
+    },
     toggleSideBar() {
       this.sidebarState = !this.sidebarState;
       this.showoptions = false;
