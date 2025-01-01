@@ -47,7 +47,7 @@
             />
           </div>
   
-          <!-- Role Selection -->
+          <!-- Role Selection
           <div class="form-group">
             <label for="role">Role</label>
             <a-select
@@ -70,7 +70,7 @@
               :options="accountOptions"
               :maxTagCount="3"
             ></a-select>
-          </div>
+          </div> -->
   
           <button type="submit" class="signup-button">Sign Up</button>
         </form>
@@ -156,11 +156,11 @@
       return;
     }
   
-    if (username.value && email.value && password.value && role.value) {
-      if (role.value === 'Monitor' && selectedAccounts.value.length === 0) {
-        alert('Please select at least one account for Monitor.');
-        return;
-      }
+    if (username.value && email.value && password.value ) {
+      // if (role.value === 'Monitor' && selectedAccounts.value.length === 0) {
+      //   alert('Please select at least one account for Monitor.');
+      //   return;
+      // }
   
       try {
         await SignUpUser(
@@ -170,6 +170,7 @@
           selectedAccounts.value
         );
         alert('Signup successful!');
+        goToLogin();
       } catch (error) {
         alert('Error during signup. Please try again.');
       }
