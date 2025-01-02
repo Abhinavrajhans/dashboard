@@ -113,8 +113,15 @@
                 <span class="text">Settings</span>
               </a>
             </li>
+            <li :class="selected == 'AdminPanel' ? 'active' : ''" @click="changeSelected('AdminPanel')">
+              <a href="#">
+                <i class="icon ph-bold ph-gear"></i>
+                <span class="text">Admin Panel</span>
+              </a>
+            </li>
           </ul>
         </div>
+        
       </div>
       <div class="menu">
         <p class="title">Account</p>
@@ -155,6 +162,7 @@ export default {
         'DataVisualizer': '/visualize',
         'SignalBook': '/signalbook',
         'ServerData': '/serverData',
+        'AdminPanel': '/adminPanel'
       }
 
     }
