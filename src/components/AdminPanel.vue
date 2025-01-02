@@ -225,6 +225,10 @@ const fetchData = async (endpoint, stateRef) => {
 
 // Save Changes
 const saveChanges = async () => {
+  if(selectedAccounts.value.length === 0){
+    alert("Accounts can be Empty");
+    return;
+  }
   updateLoading.value = true;
   updateError.value = null;
 
@@ -245,6 +249,7 @@ const saveChanges = async () => {
       users.value[editingIndex.value] = { ...updatedUser }; // Update local table
       closeModal();
       alert('User updated successfully!');
+      window.location.reload(); 
     } else {
       const errorMessage = await response.text();
       updateError.value = `Error updating user: ${errorMessage}`;
