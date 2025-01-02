@@ -46,31 +46,7 @@
               required
             />
           </div>
-  
-          <!-- Role Selection
-          <div class="form-group">
-            <label for="role">Role</label>
-            <a-select
-              v-model:value="role"
-              placeholder="Select Role"
-              style="width: 100%"
-            >
-              <a-select-option value="Admin">Admin</a-select-option>
-              <a-select-option value="Monitor">Monitor</a-select-option>
-            </a-select>
-          </div>
-          
-          <div class="form-group" v-if="role === 'Monitor'">
-            <label>Account Access</label>
-            <a-select
-              v-model:value="selectedAccounts"
-              mode="multiple"
-              placeholder="Select Accounts"
-              style="width: 100%"
-              :options="accountOptions"
-              :maxTagCount="3"
-            ></a-select>
-          </div> -->
+
   
           <button type="submit" class="signup-button">Sign Up</button>
         </form>
@@ -85,43 +61,45 @@
   
   <script setup>
   import { ref, computed, onMounted } from 'vue';
-  
-  const SignUpUser = async (username, password, role, accountAccess) => {
-    try {
-      const response = await fetch('https://api.swancapital.in/addUser', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          username: username,
-          password: password,
-          role: role,
-          accountAccess: role === 'Monitor' ? accountAccess : null,
-        }),
-      });
-  
-      if (response.ok) {
-        const data = await response.json();
-        console.log(data);
-        return data;
-      } else {
-        throw new Error(response.statusText);
-      }
-    } catch (error) {
-      console.error('Error:', error);
-      throw error;
-    }
-  };
-  
-  // State definitions
+
   const username = ref('');
   const email = ref('');
   const password = ref('');
   const confirmPassword = ref('');
-  const role = ref('');
-  const selectedAccounts = ref([]);
   const accounts = ref([]);
+
+
+
+
+  const SignUpUser = async () => {
+  try {
+    const response = await fetch('https://api.swancapital.in/addUser', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        username: username.value,
+        password: password.value,
+        email: email.value,  // Correctly passing the email variable
+      }),
+    });
+
+    if (response.ok) {
+      const data = await response.json();
+      console.log(data);
+      return data;
+    } else {
+      throw new Error(response.statusText);
+    }
+  } catch (error) {
+    console.error('Error:', error);
+    throw error;
+  }
+};
+
+  
+
   
   // Computed property for account options
   const accountOptions = computed(() => 
@@ -157,18 +135,9 @@
     }
   
     if (username.value && email.value && password.value ) {
-      // if (role.value === 'Monitor' && selectedAccounts.value.length === 0) {
-      //   alert('Please select at least one account for Monitor.');
-      //   return;
-      // }
-  
+      console.log(username.value, " ",email.value," ", password.value);
       try {
-        await SignUpUser(
-          username.value,
-          password.value,
-          role.value,
-          selectedAccounts.value
-        );
+        await SignUpUser();
         alert('Signup successful!');
         goToLogin();
       } catch (error) {
