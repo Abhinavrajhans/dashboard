@@ -55,7 +55,7 @@
     const data = await response.json();
 
     if (data.success) {
-      
+      localStorage.setItem('user', JSON.stringify(data));
       localStorage.setItem('isLoggedIn', 'true');
       alert('Login successful!');
       window.location.reload(); // Refresh the page after login success
