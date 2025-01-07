@@ -131,8 +131,6 @@ provide('triggerToast', triggerToast)
 provide('book', book.value)
 
 
-provide('triggerToast', triggerToast)
-provide('book', book.value)
 
 </script>
 
