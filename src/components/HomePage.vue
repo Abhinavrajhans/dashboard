@@ -178,11 +178,22 @@ const connectWebSocket = () => {
     if (event.data === 'ping') {
       socket.send('pong')
     } else {
+
       const message = JSON.parse(event.data);
       if (message['live_weights']) {
         live_weights.value = message['live_weights'];
       }
+      let ar2 = message.time;
+      if (past_time.value === 0) past_time.value = ar2;
+      let date1 = new Date(past_time.value.replace(/(\d{2})-(\d{2})-(\d{4})/, '$3-$2-$1'));
+      let date2 = new Date(ar2.replace(/(\d{2})-(\d{2})-(\d{4})/, '$3-$2-$1'));
+      let diffInMs = date2 - date1;
+      let diffInSeconds = diffInMs / 1000;
+      Latency.value = diffInSeconds;
+      max_latency.value = Math.max(max_latency.value, Latency.value)
+      past_time.value = ar2;
       handleMessage(message)
+
     }
   }
   socket.onclose = (event) => {
