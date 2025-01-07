@@ -80,8 +80,8 @@ const handleMessage = (message) => {
 
 const connectToSSE = () => {
   const token = localStorage.getItem('access_token'); // Retrieve the access token
-    if (!token) {
-        alert('User not authenticated');
+    if (!token ) {
+        if(isLoggedIn.value)alert('User not authenticated To Get Errors');
         return;
     }
     
