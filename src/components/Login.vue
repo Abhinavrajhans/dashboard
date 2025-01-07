@@ -52,7 +52,6 @@
     });
 
     const data = await response.json();
-   
     if (data.success) {
       // Store user info and token separately for clarity
       localStorage.setItem('access_token', data.access_token); // Store the token separately
@@ -60,7 +59,7 @@
       alert('Login successful!');
       window.location.reload(); // Refresh the page after login success
     } else {
-      alert(data.message);
+      alert(data.detail);
     }
   } catch (error) {
     console.error('Error during login:', error);
