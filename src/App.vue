@@ -37,16 +37,10 @@ const isLoggedIn = ref(false) // Add a ref to track login state
 const toggleForm = () => {
   showloginorSignup.value = !showloginorSignup.value;
 }
-
 const checkLoginStatus = () => {
-  const userSession = localStorage.getItem('isLoggedIn'); // Check if logged in
-  if (userSession === 'true') {
-    isLoggedIn.value = true;
-  } else {
-    isLoggedIn.value = false;
-  }
-}
-
+  const token = localStorage.getItem('access_token'); // Check if the access token is stored
+  isLoggedIn.value = !!token; // Set isLoggedIn to true if token exists, false otherwise
+};
 
 
 const book = ref({})
@@ -85,6 +79,12 @@ const handleMessage = (message) => {
 }
 
 const connectToSSE = () => {
+  const token = localStorage.getItem('access_token'); // Retrieve the access token
+    if (!token) {
+        alert('User not authenticated');
+        return;
+    }
+    
   const socket = new WebSocket('wss://api.swancapital.in/errorLogs');
 
   socket.onmessage = (event) => {
@@ -112,6 +112,9 @@ const connectToSSE = () => {
   }
 
   socket.onopen = () => {
+   
+    const authMessage = JSON.stringify({ token });
+    socket.send(authMessage);
     console.log('WebSocket connection opened')
   }
   socket.onerror = (error) => {
@@ -140,7 +143,7 @@ provide('book', book.value)
 
 
     <SideBar v-if="isLoggedIn" @State="ChangeSideBarState" class="sideBar" />
-    <Toast v-if="toastConfig.show" :message="toastConfig.message" :type="toastConfig.type" @close="hideToast" />
+    <Toast v-if="toastConfig.show && isLoggedIn" :message="toastConfig.message" :type="toastConfig.type" @close="hideToast" />
     <RouterView v-if="isLoggedIn" :class="sideBarState ? 'content' : 'content2'" />
 
   </div>
