@@ -30,13 +30,11 @@ const connectServerDataWebSocket = () => {
         alert('User not authenticated');
         return;
     }
-    
     const ServerDataSocket = new WebSocket('wss://api.swancapital.in/serverData');
 
     ServerDataSocket.onopen = function (e) {
-         // Send the token as the first message for authentication
         const authMessage = JSON.stringify({ token });
-        socket.send(authMessage);
+        ServerDataSocket.send(authMessage);
         console.log("ServerDataSocket details connection established");
     };
     ServerDataSocket.onmessage = function (event) {
