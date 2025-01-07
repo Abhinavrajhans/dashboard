@@ -98,13 +98,22 @@ const updateData = () => {
 
 
 const connectWebSocket = () => {
+    const token = localStorage.getItem('access_token'); // Retrieve the access token
+    if (!token) {
+        alert('User not authenticated');
+        return;
+    }
     const socket = new WebSocket('wss://api.swancapital.in/ws');
 
     socket.onopen = () => {
         console.log('WebSocket connection opened')
+        const authMessage = JSON.stringify({ token });
+        socket.send(authMessage);
         checkBackendConnection.value = true
         reconnectAttempts = 0
         startPingInterval()
+
+        
     }
 
     socket.onmessage = (event) => {

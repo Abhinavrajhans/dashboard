@@ -145,6 +145,13 @@ const LagPageHandler = () => {
 
 }
 const connectToSSE = () => {
+  const token = localStorage.getItem('access_token'); // Retrieve the access token
+  if (!token) {
+    alert('User not authenticated');
+    return;
+  }
+
+
   const socket = new WebSocket('wss://api.swancapital.in/ws');
 
   socket.onmessage = (event) => {
@@ -171,6 +178,8 @@ const connectToSSE = () => {
   }
   socket.onopen = () => {
     console.log('WebSocket connection opened')
+    const authMessage = JSON.stringify({ token });
+    socket.send(authMessage);
   }
   socket.onerror = (error) => {
     console.error('WebSocket error:', error)
@@ -179,9 +188,18 @@ const connectToSSE = () => {
 
 
 const connectStrategyWebSocket = () => {
+  const token = localStorage.getItem('access_token'); // Retrieve the access token
+  if (!token) {
+      alert('User not authenticated');
+      return;
+  }
+    
   const clientStrategySocket = new WebSocket('wss://api.swancapital.in/chart/strategy');
 
   clientStrategySocket.onopen = function (e) {
+     // Send the token as the first message for authentication
+    const authMessage = JSON.stringify({ token });
+    socket.send(authMessage);
     console.log("Strategy connection established");
     // Send the initial set of client data
     sendClientDetails();
@@ -241,8 +259,17 @@ const connectStrategyWebSocket = () => {
 
 
 const connectBasketWebSocket = () => {
+  const token = localStorage.getItem('access_token'); // Retrieve the access token
+  if (!token) {
+      alert('User not authenticated');
+      return;
+  }
+    
   const clientBasketSocket = new WebSocket('wss://api.swancapital.in/chart/basket');
   clientBasketSocket.onopen = function (e) {
+     // Send the token as the first message for authentication
+    const authMessage = JSON.stringify({ token });
+    socket.send(authMessage);
     console.log("Basket connection established");
     // Send the initial set of client data
     sendClientDetails();
@@ -309,19 +336,21 @@ const connectBasketWebSocket = () => {
 
 
 const connectClientDetailsWebSocket = () => {
+  const token = localStorage.getItem('access_token'); // Retrieve the access token
+  if (!token) {
+      alert('User not authenticated');
+      return;
+  }
+    
   const clientDetailSocket = new WebSocket('wss://api.swancapital.in/clientdetails');
   clientDetailSocket.onopen = function (e) {
+     // Send the token as the first message for authentication
+    const authMessage = JSON.stringify({ token });
+    socket.send(authMessage);
     console.log("Client details connection established");
-    // Send the initial set of client data
     sendClientDetails();
   };
-  // clientDetailSocket.onmessage = function (event) {
-  //   const data = JSON.parse(event.data);
-  //   console.log("Received data:", data);
-  //   let Book_data = Object.values(data.table_data || {});
-  //   book.value = Book_data;
-  //   // Handle the received data here
-  // };
+
   clientDetailSocket.onmessage = function (event) {
     const data = JSON.parse(event.data);
     let ar2 = data["time"];

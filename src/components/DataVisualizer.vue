@@ -18,9 +18,18 @@ const signal_delay = ref([])
 
 
 const connectClientDetailsWebSocket = () => {
+    const token = localStorage.getItem('access_token'); // Retrieve the access token
+    if (!token) {
+        alert('User not authenticated');
+        return;
+    }
+    
     const clientDetailSocket = new WebSocket('wss://api.swancapital.in/lagsData');
 
     clientDetailSocket.onopen = function (e) {
+         // Send the token as the first message for authentication
+        const authMessage = JSON.stringify({ token });
+        socket.send(authMessage);
         console.log("Client details connection established");
     };
     clientDetailSocket.onmessage = function (event) {

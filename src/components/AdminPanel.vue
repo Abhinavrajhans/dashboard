@@ -206,33 +206,50 @@ const closeModal = () => {
   selectedAccounts.value = [];
 };
 
+
+
 const fetchData = async (endpoint, stateRef) => {
   try {
-    const response = await fetch(`https://api.swancapital.in/${endpoint}`);
+    const access_token = localStorage.getItem('access_token');
+    if (!access_token) throw new Error('User not authenticated');
+    const token = access_token;
+
+    const response = await fetch(`https://api.swancapital.in/${endpoint}`, {
+      method: 'GET',
+      headers: {
+        'Authorization': `Bearer ${token}`, // Include the Bearer token
+        'Content-Type': 'application/json',
+      },
+    });
     if (response.ok) {
       const data = await response.json();
-      console.log(`${endpoint} data from API:`, data);
-      
-      // Handle the special case for accounts where we need Object.keys()
       stateRef.value = endpoint === 'getAccounts' ? Object.keys(data) : (data || []);
     } else {
-      console.error(`Error fetching ${endpoint}:`, response.statusText);
+      const errorMessage = await response.text();
+      console.error("API Error:", errorMessage);
+      throw new Error(`Error fetching ${endpoint}: ${errorMessage}`);
     }
   } catch (err) {
-    console.error(`Error fetching ${endpoint}:`, err);
+    console.error(`Error fetching ${endpoint}:`, err.message);
   }
 };
 
+
 // Save Changes
 const saveChanges = async () => {
-  if(selectedAccounts.value.length === 0){
-    alert("Accounts can be Empty");
+  if (selectedAccounts.value.length === 0 && editingUser.value.role != 'Admin') {
+    alert("Accounts cannot be empty");
     return;
   }
+
   updateLoading.value = true;
   updateError.value = null;
 
   try {
+    // Retrieve the access token from localStorage
+    const token = localStorage.getItem('access_token');
+    if (!token) throw new Error('User not authenticated');
+
     // Prepare data for API
     const updatedUser = {
       ...editingUser.value,
@@ -241,7 +258,10 @@ const saveChanges = async () => {
 
     const response = await fetch('https://api.swancapital.in/editUser', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`, // Include the Bearer token
+      },
       body: JSON.stringify(updatedUser),
     });
 
@@ -249,18 +269,19 @@ const saveChanges = async () => {
       users.value[editingIndex.value] = { ...updatedUser }; // Update local table
       closeModal();
       alert('User updated successfully!');
-      window.location.reload(); 
+      window.location.reload(); // Refresh the page on success
     } else {
-      const errorMessage = await response.text();
+      const errorMessage = await response.text(); // Get detailed error message
       updateError.value = `Error updating user: ${errorMessage}`;
+      alert(updateError.value); // Optional: Alert the error message
     }
   } catch (error) {
     updateError.value = `An error occurred: ${error.message}`;
+    alert(updateError.value); // Optional: Alert the error message
   } finally {
     updateLoading.value = false;
   }
 };
-
 
 
 // Usage:
@@ -271,26 +292,34 @@ const fetchRoles = () => fetchData('getRoles', roles);
 
 const deleteUser = async (user) => {
   try {
+    // Retrieve the access token from localStorage
+    const token = localStorage.getItem('access_token');
+    if (!token) throw new Error('User not authenticated');
+
     const response = await fetch('https://api.swancapital.in/deleteUser', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`, // Include the Bearer token
       },
       body: JSON.stringify(user), // Serialize the user object
     });
 
     if (response.ok) {
       console.log(`User ${user.email} deleted successfully.`);
+      alert(`User ${user.email} deleted successfully.`);
       location.reload(); // Reload the page on success
     } else {
-      alert("Error deleting user. Please try again.");
+      const errorMessage = await response.text(); // Get the detailed error message
+      alert(`Error deleting user: ${errorMessage}`);
       console.error('Error deleting user:', response.statusText);
     }
   } catch (error) {
     alert("Error deleting user. Please try again.");
-    console.error('Error deleting user:', error);
+    console.error('Error deleting user:', error.message);
   }
 };
+
 
 onMounted(async () => {
   await fetchUsers();

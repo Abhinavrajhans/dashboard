@@ -117,9 +117,18 @@ const updateData = () => {
 
 
 const connectServerDataWebSocket = () => {
+  const token = localStorage.getItem('access_token'); // Retrieve the access token
+  if (!token) {
+      alert('User not authenticated');
+      return;
+  }
+    
   const socket = new WebSocket('wss://api.swancapital.in/serverData');
 
   socket.onopen = () => {
+     // Send the token as the first message for authentication
+    const authMessage = JSON.stringify({ token });
+    socket.send(authMessage);
     console.log('ServerData WebSocket connection opened')
     checkServerDataConnection.value = true;
   }
@@ -147,41 +156,39 @@ const connectServerDataWebSocket = () => {
 }
 
 const connectWebSocket = () => {
+  const token = localStorage.getItem('access_token'); // Retrieve the access token
+  if (!token) {
+    alert('User not authenticated');
+    return;
+  }
+
   const socket = new WebSocket('wss://api.swancapital.in/ws');
 
   socket.onopen = () => {
-    console.log('WebSocket connection opened')
+    console.log('WebSocket connection opened');
+    
+    // Send the token as the first message for authentication
+    const authMessage = JSON.stringify({ token });
+    socket.send(authMessage);
     checkBackendConnection.value = true
-  }
+  };
+
 
   socket.onmessage = (event) => {
     if (event.data === 'ping') {
       socket.send('pong')
     } else {
-
       const message = JSON.parse(event.data);
       if (message['live_weights']) {
         live_weights.value = message['live_weights'];
       }
-      let ar2 = message.time;
-      if (past_time.value === 0) past_time.value = ar2;
-      let date1 = new Date(past_time.value.replace(/(\d{2})-(\d{2})-(\d{4})/, '$3-$2-$1'));
-      let date2 = new Date(ar2.replace(/(\d{2})-(\d{2})-(\d{4})/, '$3-$2-$1'));
-      let diffInMs = date2 - date1;
-      let diffInSeconds = diffInMs / 1000;
-      Latency.value = diffInSeconds;
-      max_latency.value = Math.max(max_latency.value, Latency.value)
-      past_time.value = ar2;
       handleMessage(message)
     }
   }
-
   socket.onclose = (event) => {
     console.log('WebSocket connection closed:', event.reason)
     checkBackendConnection.value = false
   }
-
-
   socket.onerror = (error) => {
     console.error('WebSocket error:', error)
     checkBackendConnection.value = false

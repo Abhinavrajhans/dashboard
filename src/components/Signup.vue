@@ -66,7 +66,6 @@
   const email = ref('');
   const password = ref('');
   const confirmPassword = ref('');
-  const accounts = ref([]);
 
 
 
@@ -87,8 +86,12 @@
 
     if (response.ok) {
       const data = await response.json();
-      console.log(data);
-      return data;
+      if(data['status']==='error'){
+        alert(data['message']);
+      }
+      else alert('Signup successful!');
+      return data['status'];
+    
     } else {
       throw new Error(response.statusText);
     }
@@ -101,29 +104,6 @@
   
 
   
-  // Computed property for account options
-  const accountOptions = computed(() => 
-    accounts.value.map(account => ({
-      label: account,
-      value: account
-    }))
-  );
-  
-  // Fetch accounts when the component is mounted
-  onMounted(async () => {
-    try {
-      const response = await fetch('https://api.swancapital.in/getAccounts');
-      if (response.ok) {
-        const data = await response.json();
-        accounts.value = Object.keys(data) || [];
-      } else {
-        console.error('Error fetching accounts:', response.statusText);
-      }
-    } catch (error) {
-      console.error('Error:', error);
-    }
-  });
-  
   // Emit function for toggling forms
   const emit = defineEmits(['toggleForm']);
   
@@ -135,11 +115,11 @@
     }
   
     if (username.value && email.value && password.value ) {
-      console.log(username.value, " ",email.value," ", password.value);
       try {
-        await SignUpUser();
-        alert('Signup successful!');
+        const status=await SignUpUser();
+        if(status!=='error')
         goToLogin();
+      
       } catch (error) {
         alert('Error during signup. Please try again.');
       }

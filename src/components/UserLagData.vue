@@ -35,9 +35,18 @@ const mix_real_ideal_mtm_table = ref({})
 const userLagData = ref({})
 
 const connectClientLagsDataWebSocket = () => {
+    const token = localStorage.getItem('access_token'); // Retrieve the access token
+    if (!token) {
+        alert('User not authenticated');
+        return;
+    }
+    
     const clientLagDataDetailSocket = new WebSocket('wss://api.swancapital.in/userLagData');
 
     clientLagDataDetailSocket.onopen = function (e) {
+         // Send the token as the first message for authentication
+        const authMessage = JSON.stringify({ token });
+        socket.send(authMessage);
         console.log("ClientLagData details connection established");
         // Send the initial set of client data
         sendClientUserLagDataDetails();

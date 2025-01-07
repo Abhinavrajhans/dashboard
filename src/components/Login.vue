@@ -38,7 +38,6 @@
   
   <script setup>
   import { ref } from 'vue';
-  
   const loginUser = async (username, password) => {
   try {
     const response = await fetch('https://api.swancapital.in/login', {
@@ -53,17 +52,18 @@
     });
 
     const data = await response.json();
-
+   
     if (data.success) {
-      localStorage.setItem('user', JSON.stringify(data));
-      localStorage.setItem('isLoggedIn', 'true');
+      // Store user info and token separately for clarity
+      localStorage.setItem('access_token', data.access_token); // Store the token separately
+      
       alert('Login successful!');
       window.location.reload(); // Refresh the page after login success
     } else {
       alert(data.message);
     }
   } catch (error) {
-    console.error('Error:', error);
+    console.error('Error during login:', error);
     alert('Error during login. Please try again.');
   }
 };

@@ -170,9 +170,7 @@ export default {
   methods: {
     logout() {
       // Clear the session or localStorage data
-      localStorage.removeItem('user');
-      localStorage.removeItem('isLoggedIn'); 
-     
+      localStorage.removeItem('access_token');
       alert('You have been logged out.');
       window.location.reload(); // Refresh the page after login success
     },
