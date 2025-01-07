@@ -55,23 +55,27 @@ const filteredSignalBookData = computed(() => {
     });
 });
 
-
 const connectClientDetailsWebSocket = () => {
-    const token = localStorage.getItem('access_token'); // Retrieve the access token
-    if (!token) {
-        alert('User not authenticated');
-        return;
-    }
+  const token = localStorage.getItem('access_token'); // Retrieve the access token
+  if (!token) {
+      alert('User not authenticated');
+      return;
+  }
     
-    const clientDetailSocket = new WebSocket('wss://api.swancapital.in/signalbook');
+  const socket = new WebSocket('wss://api.swancapital.in/signalbook');
 
-    clientDetailSocket.onopen = function (e) {
-         // Send the token as the first message for authentication
-        const authMessage = JSON.stringify({ token });
-        socket.send(authMessage);
-        console.log("Client details connection established");
-    };
-    clientDetailSocket.onmessage = function (event) {
+  socket.onopen = () => {
+     // Send the token as the first message for authentication
+    const authMessage = JSON.stringify({ token });
+    socket.send(authMessage);
+    console.log('ServerData WebSocket connection opened')
+    checkServerDataConnection.value = true;
+  }
+
+  socket.onmessage = (event) => {
+    if (event.data === 'ping') {
+      socket.send('pong')
+    } else {
         const data = JSON.parse(event.data);
         signal_book_data.value = Object.values(data['table_data'])
         uids.value = [...new Set(signal_book_data.value.map(item => item.uid))];
@@ -88,21 +92,24 @@ const connectClientDetailsWebSocket = () => {
             max_latency.value = Math.max(max_latency.value, latency.value)
             past_time.value = ar2;
         }
-    };
+    }
+  }
+
+  socket.onclose = (event) => {
+    console.log('ServerData WebSocket connection closed:', event.reason)
+    checkServerDataConnection.value = false
+  }
 
 
-    clientDetailSocket.onerror = function (error) {
-        console.log(`WebSocket error: ${error.message}`);
-    };
-
-    clientDetailSocket.onclose = function (event) {
-        console.log('Client Detail WebSocket connection closed:', event.reason);
-    };
+  socket.onerror = (error) => {
+    console.error('ServerData WebSocket error:', error)
+    checkServerDataConnection.value = false
+  }
+}
 
 
 
-    return clientDetailSocket;
-};
+
 
 const showOnPage = ref('Positions')
 
