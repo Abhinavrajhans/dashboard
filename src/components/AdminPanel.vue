@@ -24,6 +24,7 @@
               <th>Email</th>
               <th>Role</th>
               <th>Account Access</th>
+              <th>Features</th>
               <th>Actions</th>
               <th>Delete</th>
             </tr>
@@ -35,6 +36,7 @@
               <td>{{ user.email }}</td>
               <td>{{ user.role }}</td>
               <td>{{ user['Account Access'].join(', ') }}</td>
+              <td>{{ user['Features'].join(', ') }}</td>
               <td>
                 <button 
                   @click="openEditModal(user)"
@@ -106,7 +108,7 @@
                     </option>
                 </select>
             </div>
-            <div class="form-group" v-if="editingUser.role === 'Monitor'">
+            <div class="form-group" v-if="editingUser.role != 'Admin'">
                 <label>Account Access</label>
                 <a-select
                     v-model:value="selectedAccounts"
@@ -116,6 +118,19 @@
                     :options="accountOptionsWithAll"
                     :maxTagCount="3"
                     @change="handleAccountChange"
+                    :disabled="updateLoading" 
+                ></a-select>
+            </div>
+            <div class="form-group" v-if="editingUser.role != 'Admin'">
+                <label>Features</label>
+                <a-select
+                    v-model:value="selectedFeatures"
+                    mode="multiple"
+                    placeholder="Select Features"
+                    style="width: 100%"
+                    :options="featuresOptionsWithAll"
+                    :maxTagCount="3"
+                    @change="handleFeatureChange"
                     :disabled="updateLoading" 
                 ></a-select>
             </div>
@@ -156,14 +171,26 @@ const updateLoading = ref(false);
 const updateError = ref(null);
 const accounts = ref([]);
 const selectedAccounts = ref([]);
+const selectedFeatures = ref([]);
 const roles = ref([])
+const features = ref([])
 // "All" Label State
-const isAllSelected = ref(false);
+const isaccountAllSelected = ref(false);
+const isfeatureAllSelected = ref(false);
 
 // Add "All" or "Remove All" option dynamically
 const accountOptionsWithAll = computed(() => [
-  { label: isAllSelected.value ? 'Remove All' : 'All', value: 'all' },
+  { label: isaccountAllSelected.value ? 'Remove All' : 'All', value: 'all' },
   ...accounts.value.map(account => ({
+    label: account,
+    value: account,
+  })),
+]);
+
+
+const featuresOptionsWithAll = computed(() => [
+  { label: isfeatureAllSelected.value ? 'Remove All' : 'All', value: 'all' },
+  ...features.value.map(account => ({
     label: account,
     value: account,
   })),
@@ -172,21 +199,42 @@ const accountOptionsWithAll = computed(() => [
 // Handle selection change
 const handleAccountChange = (value) => {
   if (value.includes('all')) {
-    if (isAllSelected.value) {
+    if (isaccountAllSelected.value) {
       // Deselect all accounts
       selectedAccounts.value = [];
-      isAllSelected.value = false;
+      isaccountAllSelected.value = false;
     } else {
       // Select all accounts
       selectedAccounts.value = accounts.value;
-      isAllSelected.value = true;
+      isaccountAllSelected.value = true;
     }
   } else {
     // Normal selection handling
     selectedAccounts.value = value.filter(account => account !== 'all');
-    isAllSelected.value = selectedAccounts.value.length === accounts.value.length;
+    isaccountAllSelected.value = selectedAccounts.value.length === accounts.value.length;
   }
 };
+
+
+const handleFeatureChange = (value) => {
+  if (value.includes('all')) {
+    if (isfeatureAllSelected.value) {
+      // Deselect all accounts
+      selectedFeatures.value = [];
+      isfeatureAllSelected.value = false;
+    } else {
+      // Select all accounts
+      selectedFeatures.value = features.value;
+      isfeatureAllSelected.value = true;
+    }
+  } else {
+    // Normal selection handling
+    selectedFeatures.value = value.filter(account => account !== 'all');
+    isfeatureAllSelected.value = selectedFeatures.value.length === features.value.length;
+
+  }
+};
+
 
 
 const openEditModal = (user) => {
@@ -195,6 +243,7 @@ const openEditModal = (user) => {
   updateError.value = null;
   showModal.value = true;
   selectedAccounts.value = user['Account Access'] || []; // Pre-fill selected accounts in modal
+  selectedFeatures.value= user['Features'] || []; // Pre-fill selected features in modal
 };
 
 // Close modal
@@ -254,6 +303,7 @@ const saveChanges = async () => {
     const updatedUser = {
       ...editingUser.value,
       'Account Access': selectedAccounts.value,
+      'Features': selectedFeatures.value, // Add this line
     };
 
     const response = await fetch('https://api.swancapital.in/editUser', {
@@ -288,6 +338,8 @@ const saveChanges = async () => {
 const fetchUsers = () => fetchData('users', users);
 const fetchAccounts = () => fetchData('getAccounts', accounts);
 const fetchRoles = () => fetchData('getRoles', roles);
+const fetchFeatures= () => fetchData('getFeatures', features);
+
 
 
 const deleteUser = async (user) => {
@@ -325,15 +377,14 @@ onMounted(async () => {
   await fetchUsers();
   await fetchAccounts();
   await fetchRoles();
+  await fetchFeatures();
 });
 </script>
 
   
-  <style scoped>
- .admin-container {
+<style scoped>
+.admin-container {
   padding: 24px;
-  max-width: 1200px;
-  margin: 0 auto;
 }
 
 .admin-title {
@@ -341,51 +392,71 @@ onMounted(async () => {
   font-weight: 600;
   color: #1f2937;
   margin-bottom: 24px;
+  text-align: center;
 }
 
 /* Table Styles */
 .table-container {
   background-color: white;
   border-radius: 8px;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
-  overflow-x: auto;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  overflow-x: auto; /* Enable horizontal scroll for small screens */
 }
 
 .admin-table {
   width: 100%;
   border-collapse: collapse;
-  min-width: 800px;
+  table-layout: auto; /* Ensures columns resize dynamically */
+  min-width: 1000px; /* Prevents layout breaking for smaller content */
 }
 
 .admin-table th {
-  background-color: #f9fafb;
+  background-color: #f3f4f6;
   padding: 12px 16px;
-  text-align: left;
+  text-align: center;
   font-weight: 600;
   color: #4b5563;
-  border-bottom: 1px solid #e5e7eb;
+  border-bottom: 2px solid #e5e7eb;
+  white-space: nowrap; /* Prevent header text wrapping */
 }
 
 .admin-table td {
   padding: 12px 16px;
   color: #1f2937;
   border-bottom: 1px solid #e5e7eb;
+  vertical-align: middle; /* Centers content vertically */
+  text-align: center; /* Centers text in all columns */
+  word-wrap: break-word; /* Allows wrapping of long text */
+  word-break: break-word;
+  max-width: 200px; /* Adjust as needed for text overflow */
 }
 
 .admin-table tr:hover {
   background-color: #f9fafb;
 }
 
+/* Features Column Styling */
+.admin-table td.features-column {
+  max-width: 300px; /* Limit the column width */
+  text-align: left; /* Align text to the left */
+  overflow: hidden;
+  text-overflow: ellipsis; /* Adds ellipsis for overflow */
+  white-space: nowrap; /* Prevent wrapping */
+}
+
 /* Button Styles */
-.edit-button {
-  background-color: #3b82f6;
+.edit-button, .save-button, .cancel-button {
   color: white;
   border: none;
-  padding: 6px 12px;
   border-radius: 4px;
   cursor: pointer;
   font-size: 14px;
+  padding: 8px 16px;
   transition: background-color 0.2s;
+}
+
+.edit-button {
+  background-color: #3b82f6;
 }
 
 .edit-button:hover {
@@ -394,13 +465,6 @@ onMounted(async () => {
 
 .save-button {
   background-color: #10b981;
-  color: white;
-  border: none;
-  padding: 8px 16px;
-  border-radius: 4px;
-  cursor: pointer;
-  font-size: 14px;
-  transition: background-color 0.2s;
 }
 
 .save-button:hover {
@@ -409,18 +473,24 @@ onMounted(async () => {
 
 .cancel-button {
   background-color: #6b7280;
-  color: white;
-  border: none;
-  padding: 8px 16px;
-  border-radius: 4px;
-  cursor: pointer;
-  font-size: 14px;
   margin-right: 8px;
-  transition: background-color 0.2s;
 }
 
 .cancel-button:hover {
   background-color: #4b5563;
+}
+
+.icon-cell {
+  text-align: center;
+  vertical-align: middle;
+}
+
+.icon {
+  display: inline-flex;
+  justify-content: center;
+  align-items: center;
+  font-size: 1.5rem;
+  cursor: pointer;
 }
 
 /* Modal Styles */
@@ -442,7 +512,7 @@ onMounted(async () => {
   padding: 24px;
   border-radius: 8px;
   width: 100%;
-  max-width: 500px;
+  max-width: 600px;
   box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
 }
 
@@ -451,6 +521,7 @@ onMounted(async () => {
   font-weight: 600;
   color: #1f2937;
   margin-bottom: 20px;
+  text-align: center;
 }
 
 .modal-actions {
@@ -459,67 +530,7 @@ onMounted(async () => {
   margin-top: 24px;
 }
 
-/* Form Styles */
-.form-container {
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
-}
-
-.form-group {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-}
-
-.form-group label {
-  font-size: 14px;
-  font-weight: 500;
-  color: #4b5563;
-}
-
-.form-group input {
-  padding: 8px 12px;
-  border: 1px solid #d1d5db;
-  border-radius: 4px;
-  font-size: 14px;
-  color: #1f2937;
-  transition: border-color 0.2s;
-}
-
-.form-group input:focus {
-  outline: none;
-  border-color: #3b82f6;
-  box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.1);
-}
-
-.form-group input:disabled {
-  background-color: #f3f4f6;
-  cursor: not-allowed;
-}
-
-/* Loading and Error States (already present in your code) */
-.loading-state {
-  text-align: center;
-  padding: 40px;
-  color: #666;
-}
-
-.loader {
-  border: 4px solid #f3f3f3;
-  border-radius: 50%;
-  border-top: 4px solid #3b82f6;
-  width: 40px;
-  height: 40px;
-  animation: spin 1s linear infinite;
-  margin: 0 auto 20px;
-}
-
-@keyframes spin {
-  0% { transform: rotate(0deg); }
-  100% { transform: rotate(360deg); }
-}
-
+/* Error Message */
 .error-message {
   background-color: #fee2e2;
   border: 1px solid #ef4444;
@@ -548,45 +559,67 @@ button:disabled {
   cursor: not-allowed;
 }
 
-.icon-cell {
-  text-align: center; /* Center horizontally */
-  vertical-align: middle; /* Center vertically */
+/* Form Styles */
+.form-container {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
 }
 
-.icon {
-  display: inline-flex;
-  justify-content: center;
-  align-items: center;
-  font-size: 1.5rem; /* Adjust size as needed */
+.form-group {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
 }
 
+.form-group label {
+  font-size: 14px;
+  font-weight: 500;
+  color: #4b5563;
+}
 
-
-.form-select {
+.form-group input, .form-select {
   padding: 8px 12px;
   border: 1px solid #d1d5db;
   border-radius: 4px;
   font-size: 14px;
   color: #1f2937;
   transition: border-color 0.2s, box-shadow 0.2s;
-  width: 100%; /* Match the width of other input fields */
-  appearance: none; /* Remove default arrow styles */
-  background: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7" /></svg>') no-repeat right 10px center;
-  background-color: #fff;
-  background-size: 1em;
-  cursor: pointer;
+  width: 100%;
 }
 
-.form-select:focus {
+.form-group input:focus, .form-select:focus {
   outline: none;
   border-color: #3b82f6;
   box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.1);
 }
 
-.form-select:disabled {
+.form-group input:disabled, .form-select:disabled {
   background-color: #f3f4f6;
   color: #9ca3af;
   cursor: not-allowed;
+}
+
+/* Loading State */
+.loading-state {
+  text-align: center;
+  padding: 40px;
+  color: #666;
+}
+
+.loader {
+  border: 4px solid #f3f3f3;
+  border-radius: 50%;
+  border-top: 4px solid #3b82f6;
+  width: 40px;
+  height: 40px;
+  animation: spin 1s linear infinite;
+  margin: 0 auto 20px;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
 }
 
 
