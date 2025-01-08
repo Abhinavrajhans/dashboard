@@ -1,92 +1,43 @@
 <script setup>
-import { onMounted, onUnmounted } from 'vue'
-import { MyEnum } from '../Enums/Prefix.js';
-import { ref, watch } from 'vue'
+import { onMounted, onUnmounted } from 'vue';
+import { ref } from 'vue';
 import Histogram from './Histogram.vue';
 
 
+const past_time = ref(0);
 
-const latency = ref(0)
-const max_latency = ref(0)
-const past_time = ref(0)
+const WS7L = ref([]);
+const WS8L = ref([]);
+const signal_delay = ref([]);
 
-const WS7L = ref([])
-const WS8L = ref([])
-const signal_delay = ref([])
-
-
-
-
-const connectClientDetailsWebSocket = () => {
-    const token = localStorage.getItem('access_token'); // Retrieve the access token
-    if (!token) {
-        alert('User not authenticated');
-        return;
-    }
-    
-    const clientDetailSocket = new WebSocket('wss://api.swancapital.in/lagsData');
-
-    clientDetailSocket.onopen = function (e) {
-         // Send the token as the first message for authentication
-        const authMessage = JSON.stringify({ token });
-        socket.send(authMessage);
-        console.log("Client details connection established");
-    };
-    clientDetailSocket.onmessage = function (event) {
-        const data = JSON.parse(event.data);
-
-        WS7L.value = data.WS7L
-        WS8L.value = data.WS8L
-        signal_delay.value = data.signal_delay
-
-
-
-        let ar2 = data["time"];
-        if (past_time.value === 0) past_time.value = ar2;
-        if (past_time.value != 0) {
-            let date1 = new Date(past_time.value.replace(/(\d{2})-(\d{2})-(\d{4})/, '$3-$2-$1'));
-            let date2 = new Date(ar2.replace(/(\d{2})-(\d{2})-(\d{4})/, '$3-$2-$1'));
-            let diffInMs = date2 - date1;
-            let diffInSeconds = diffInMs / 1000;
-            latency.value = diffInSeconds;
-            max_latency.value = Math.max(max_latency.value, latency.value)
-            past_time.value = ar2;
+const fetchClientDetails = async () => {
+    try {
+        const response = await fetch('https://api.swancapital.in/lagsData');
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
         }
-    };
+        const data = await response.json();
 
+        WS7L.value = data.WS7L;
+        WS8L.value = data.WS8L;
+        signal_delay.value = data.signal_delay;
 
-    clientDetailSocket.onerror = function (error) {
-        console.log(`WebSocket error: ${error.message}`);
-    };
-
-    clientDetailSocket.onclose = function (event) {
-        console.log('Client Detail WebSocket connection closed:', event.reason);
-    };
-
-
-
-    return clientDetailSocket;
+      
+    } catch (error) {
+        console.error('Error fetching client details:', error);
+    }
 };
-
-const showOnPage = ref('Positions')
-
 onMounted(() => {
-    connectClientDetailsWebSocket();
-})
-
-onUnmounted(() => {
-
-})
-
-
+    fetchClientDetails();
+});
 
 </script>
+
 <template>
     <div class="px-8 py-8 pageContainer">
-        <div class="LatencyTable">
-            <p> Latency :<span class="latencyvalue">{{ latency }}</span></p>
-            <p> Max Client :<span class="latencyvalue">{{ max_latency }}</span></p>
-        </div>
+        <button @click="fetchClientDetails" class="refresh-button">
+            Refresh Data
+        </button>
         <div v-if="WS7L.length > 0" class="histogram-container">
             <p class="heading">WebSocket 7 Lag</p>
             <Histogram :dataArray="WS7L" />
@@ -99,10 +50,7 @@ onUnmounted(() => {
             <p class="heading">Signal Delay</p>
             <Histogram :dataArray="signal_delay" />
         </div>
-
     </div>
-
-
 </template>
 
 <style scoped>
@@ -128,27 +76,23 @@ onUnmounted(() => {
     flex-direction: column;
 }
 
-.latencyvalue {
-    font-weight: bold;
-}
 
-.LatencyTable {
-    display: flex;
-    width: 100;
-    align-items: flex-end;
-    justify-content: flex-end;
-    padding: 20px;
-    flex-direction: column;
-}
-
-.table-heading {
-    font-size: 22px;
-    font-weight: 600;
-    margin-left: 30px;
+.refresh-button {
+    margin-bottom: 20px;
+    padding: 10px 15px;
+    font-size: 14px;
+    width: 200px;
+    cursor: pointer;
+    background-color: #007bff;
+    color: white;
+    border: none;
+    border-radius: 5px;
+    align-self: flex-end; /* Align the button to the right */
 }
 
 html {
     font-family: poppins;
     font-size: 14px;
 }
+
 </style>

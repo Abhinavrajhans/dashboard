@@ -198,8 +198,8 @@ const connectStrategyWebSocket = () => {
 
   clientStrategySocket.onopen = function (e) {
      // Send the token as the first message for authentication
-    const authMessage = JSON.stringify({ token });
-    socket.send(authMessage);
+    // const authMessage = JSON.stringify({ token });
+    // clientStrategySocket.send(authMessage);
     console.log("Strategy connection established");
     // Send the initial set of client data
     sendClientDetails();
@@ -268,8 +268,8 @@ const connectBasketWebSocket = () => {
   const clientBasketSocket = new WebSocket('wss://api.swancapital.in/chart/basket');
   clientBasketSocket.onopen = function (e) {
      // Send the token as the first message for authentication
-    const authMessage = JSON.stringify({ token });
-    socket.send(authMessage);
+    // const authMessage = JSON.stringify({ token });
+    // clientBasketSocket.send(authMessage);
     console.log("Basket connection established");
     // Send the initial set of client data
     sendClientDetails();
@@ -346,11 +346,18 @@ const connectClientDetailsWebSocket = () => {
   clientDetailSocket.onopen = function (e) {
      // Send the token as the first message for authentication
     const authMessage = JSON.stringify({ token });
-    socket.send(authMessage);
+    clientDetailSocket.send(authMessage);
     console.log("Client details connection established");
+    // Send the initial set of client data
     sendClientDetails();
   };
-
+  // clientDetailSocket.onmessage = function (event) {
+  //   const data = JSON.parse(event.data);
+  //   console.log("Received data:", data);
+  //   let Book_data = Object.values(data.table_data || {});
+  //   book.value = Book_data;
+  //   // Handle the received data here
+  // };
   clientDetailSocket.onmessage = function (event) {
     const data = JSON.parse(event.data);
     let ar2 = data["time"];
@@ -481,7 +488,7 @@ watch(selectedBasketItems, (newSelectedBasketItems) => {
     </div>
     <div class="navContainer">
       <NavBar
-        :navColumns="['Positions', 'Order', 'TradeBook', 'Combined DF', 'Combined Orders', 'Combined Trades', 'Fund Summary','Zerodha Order Book','Holdings']"
+        :navColumns="['Positions', 'Order', 'Combined DF', 'Combined Orders', 'Combined Trades', 'Fund Summary','Zerodha Order Book','Holdings']"
         @column-clicked="handleColumnClick" :colorColumns="[]" />
     </div>
     <div class="selectContainer" v-if="book && showOnPage === 'Combined DF' && filteredSignalBookData.length">
@@ -499,12 +506,12 @@ watch(selectedBasketItems, (newSelectedBasketItems) => {
       <TanStackTestTable title="Position" :data="book" :columns="rms_df_columns" :hasColor="['pnl']" :navigateTo="[]"
         :showPagination=true />
     </div>
-
+<!-- 
     <div class="my-8" v-if="book && showOnPage === 'TradeBook'">
       <TanStackTestTable title="Complete Trade Book" :data="book"
         :columns="broker === 'xts' ? live_trade_book_columns_xts : live_trade_book_columns_zerodha" :hasColor="[]"
         :navigateTo="[]" :showPagination=true />
-    </div>
+    </div> -->
 
     <div class="my-8" v-if="book && showOnPage === 'Order'">
       <TanStackTestTable title="Complete Order Book" :data="book"
@@ -513,7 +520,7 @@ watch(selectedBasketItems, (newSelectedBasketItems) => {
     </div>
     <div class="my-8" v-if="book && showOnPage === 'Fund Summary'">
       <TanStackTestTable title="Fund Summary" :data="book" :columns="fund_summary_columns"
-        :hasColor="[]" :navigateTo="[]" :showPagination=true />
+        :hasColor="['Actual MTM','Ideal MTM']" :navigateTo="[]" :showPagination=true />
     </div>
     <div class="my-8" v-if="book && showOnPage === 'Zerodha Order Book'">
       <TanStackTestTable title="Zerodha Order Book" :data="book" :columns="zerodha_order_book_columns"

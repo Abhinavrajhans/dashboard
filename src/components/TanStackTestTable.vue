@@ -1,5 +1,5 @@
 <script setup>
-import { ref, watchEffect, onMounted, onUnmounted } from 'vue'
+import { ref, watchEffect, onMounted, onUnmounted ,computed} from 'vue'
 import { useRouter } from 'vue-router';
 const router = useRouter();
 import {
@@ -25,6 +25,10 @@ const props = defineProps({
     data: {
         type: Array,
         required: true
+    },
+    showPin:{
+        type:Boolean,
+        required:false
     },
     title: {
         type: String,
@@ -65,34 +69,53 @@ const checkNavigate = (data) => {
 
 const sorting = ref([])
 const filter = ref('')
+const toggleAllColumns = (value) => {
+  table.toggleAllColumnsVisible(value)
+}
+
+const isAllColumnsVisible = computed(() => {
+  return table.getIsAllColumnsVisible()
+})
 
 // Custom pagination state
 const currentPage = ref(0)
 const pageSize = ref(5)
 
-// Initialize the table using the useVueTable hook
+// Add this after your existing refs
+const columnVisibility = ref({})
+
+// Modify your table initialization to include column visibility state
 const table = useVueTable({
-    get data() {
-        return props.data
+  get data() {
+    return props.data
+  },
+  columns: props.columns,
+  getCoreRowModel: getCoreRowModel(),
+  getSortedRowModel: getSortedRowModel(),
+  getFilteredRowModel: getFilteredRowModel(),
+  state: {
+    get sorting() {
+      return sorting.value
     },
-    columns: props.columns,
-    getCoreRowModel: getCoreRowModel(),
-    getSortedRowModel: getSortedRowModel(),
-    getFilteredRowModel: getFilteredRowModel(),
-    state: {
-        get sorting() {
-            return sorting.value
-        },
-        get globalFilter() {
-            return filter.value
-        },
+    get globalFilter() {
+      return filter.value
     },
-    onSortingChange: updaterOrValue => {
-        sorting.value =
-            typeof updaterOrValue === 'function'
-                ? updaterOrValue(sorting.value)
-                : updaterOrValue
-    },
+    get columnVisibility() {
+      return columnVisibility.value
+    }
+  },
+  onSortingChange: updaterOrValue => {
+    sorting.value =
+      typeof updaterOrValue === 'function'
+        ? updaterOrValue(sorting.value)
+        : updaterOrValue
+  },
+  onColumnVisibilityChange: updaterOrValue => {
+    columnVisibility.value =
+      typeof updaterOrValue === 'function'
+        ? updaterOrValue(columnVisibility.value)
+        : updaterOrValue
+  },
 })
 
 // Computed properties for pagination
@@ -186,6 +209,32 @@ onUnmounted(() => {
     <div>
         <p class="table-heading">{{ title }}</p>
         <div class="px-4 sm:px-6 lg:px-8 pb-8 bg-white drop-shadow-sm">
+            <div v-if="showPin" class="column-visibility-controls mb-4 border rounded-md p-4">
+                <div class="mb-2 border-b pb-2">
+                    <label class="flex items-center">
+                        <input
+                        type="checkbox"
+                        :checked="isAllColumnsVisible"
+                        @change="e => toggleAllColumns(e.target.checked)"
+                        class="mr-2"
+                        />
+                        <span>Toggle All</span>
+                    </label>
+                </div>
+                <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2">
+                    <div v-for="column in table.getAllLeafColumns()" :key="column.id">
+                        <label class="flex items-center">
+                        <input
+                            type="checkbox"
+                            :checked="column.getIsVisible()"
+                            @change="column.toggleVisibility()"
+                            class="mr-2"
+                        />
+                        <span>{{ column.id }}</span>
+                        </label>
+                    </div>
+                </div>
+            </div>
 
             <div class="mt-8 flow-root">
                 <div class="my-4 headingContainer">
@@ -222,7 +271,7 @@ onUnmounted(() => {
                             <tbody class="divide-y divide-gray-200">
                                 <tr v-for="row in rows" :key="row.id">
                                     <td v-for="(cell, index) in row.getVisibleCells()" :key="cell.id"
-                                        class="maxwidth150 break-words whitespace-normal px-3 py-4 text-sm text-black-600 textcenter"
+                                        class="maxwidth150 minwidhth100 break-words whitespace-normal px-3 py-4 text-sm text-black-600 textcenter"
                                         :class="{
                                             'sticky-column': index === 0,
                                             'red': cell.getValue() < 0 && hasColor.includes(cell.id.split('_').slice(1).join('_')),
@@ -238,17 +287,6 @@ onUnmounted(() => {
                                             N/A
                                         </template>
                                     </td>
-                                    <!-- <td v-for="(cell, index) in row.getVisibleCells()" :key="cell.id"
-                            class="maxwidth150 break-words whitespace-normal px-3 py-4 text-sm text-black-600"
-                            :class="{
-                                'sticky-column': index === 0,
-                                'red': cell.getValue() < 0 && hasColor.includes(cell.id.split('_').slice(1).join('_')),
-                                'green': cell.getValue() > 0 && hasColor.includes(cell.id.split('_').slice(1).join('_')),
-                                'redbackground': hasRowcolor && hasRowcolor.arrayValues.includes(cell.row.original[hasRowcolor.columnName]),
-                                'greenbackground': hasRowcolor && !(hasRowcolor.arrayValues.includes(cell.row.original[hasRowcolor.columnName]))
-                            }" @click="checkNavigate(cell)">
-                            <FlexRender :render="cell.column.columnDef.cell" :props="cell.getContext()" />
-                        </td> -->
                                 </tr>
                             </tbody>
                         </table>
@@ -307,7 +345,21 @@ onUnmounted(() => {
 .colorcontainer {
     background: pink;
 }
+/* Add these styles to your existing <style> section */
+.column-visibility-controls {
+  background-color: white;
+  border-color: #e5e7eb;
+}
 
+.column-visibility-controls label {
+  cursor: pointer;
+  font-size: 0.875rem;
+  color: #374151;
+}
+
+.column-visibility-controls input[type="checkbox"] {
+  cursor: pointer;
+}
 .red {
     color: red;
 }
@@ -333,11 +385,14 @@ onUnmounted(() => {
 .greenbackground {
     background-color: rgb(217, 246, 217) !important;
 }
-
 .cursorpointer {
     cursor: pointer;
+    transition: all 0.2s ease;
 }
 
+.cursorpointer:hover {
+    text-decoration: underline;
+}
 table {
     border-right: none;
     border-left: none;
@@ -371,8 +426,12 @@ table {
 .backred {
     background: red;
 }
+.minwidhth100{
+    min-width: 100px;
+}
 
 .maxwidth150 {
+   
     max-width: 150px;
 }
 
@@ -414,8 +473,5 @@ table {
     width: 100%;
 }
 
-/* Add a min-width to the table to ensure horizontal scrolling when needed */
-table {
-    min-width: 100%;
-}
+
 </style>
