@@ -72,7 +72,16 @@ const updateData = () => {
   if (connection_BackendData.value != undefined) {
     index_data.value = connection_BackendData.value.live_index
     let pulse_data = connection_BackendData.value.pulse
-    time.value = connection_BackendData.value.time
+    const backendTime = new Date(connection_BackendData.value.time); // Parse the time
+    const day = backendTime.getDate().toString().padStart(2, "0");
+    const month = (backendTime.getMonth() + 1).toString().padStart(2, "0"); // Months are zero-indexed
+    const year = backendTime.getFullYear();
+    const hours = backendTime.getHours().toString().padStart(2, "0");
+    const minutes = backendTime.getMinutes().toString().padStart(2, "0");
+    const seconds = backendTime.getSeconds().toString().padStart(2, "0");
+
+    // Format the date and time as DD-MM-YYYY HH:mm:ss
+    time.value = `${day}-${month}-${year} ${hours}:${minutes}:${seconds}`;
     if (connection_BackendData.value.pulse) {
       pulse_signal.value = pulse_data
       pulse_signal.value.backendConnection = checkBackendConnection
@@ -252,188 +261,255 @@ onUnmounted(() => {
 
 
 <template>
-  <div class="homePage_Container bg-[#efefef]/30">
-
-    <div v-if="index_data" class="nav-index-container font-semibold bg-white drop-shadow-sm">
-      <div v-for="(value, key) in index_data" :key="key" class="index-item">
-        <span class="index-name">{{ formatIndexName(key) }}</span>
-        <div class="index-value-container">
-          <span :class="['index-value', getPercentageClass(key)]">{{ formatNumber(value) }}</span>
-          <img v-if="getPercentageClass(key) === 'positive'" class="image_width" src="../assets/arrow-up-long-solid.svg"
-            alt="">
-          <img v-else class="image_width" src="../assets/arrow-down-long-solid.svg" alt="">
-          <span :class="['percentage', getPercentageClass(key)]">{{ getDifference(key) }}</span>
-          <span :class="['percentage', getPercentageClass(key)]">
-            <span class="opening-brac">(</span>{{ formatPercentage(getPercentage(key)) }}<span
-              class="closing-brac">)</span>
+  <div class="homepage-container">
+    <!-- Index Data Cards -->
+    <div v-if="index_data" class="index-cards-container">
+      <div v-for="(value, key) in index_data" :key="key" 
+           class="index-card">
+        <div class="index-header">{{ formatIndexName(key) }}</div>
+        <div class="index-content">
+          <span :class="['index-value', getPercentageClass(key)]">
+            {{ formatNumber(value) }}
           </span>
+          <div class="index-change">
+            <img v-if="getPercentageClass(key) === 'positive'" 
+                 class="trend-icon" 
+                 src="../assets/arrow-up-long-solid.svg" 
+                 alt="Up">
+            <img v-else 
+                 class="trend-icon" 
+                 src="../assets/arrow-down-long-solid.svg" 
+                 alt="Down">
+            <span :class="['percentage', getPercentageClass(key)]">
+              {{ getDifference(key) }}
+              <span class="percentage-bracket">
+                ({{ formatPercentage(getPercentage(key)) }})
+              </span>
+            </span>
+          </div>
         </div>
       </div>
     </div>
 
-    <div class="time-container">
+    <!-- System Metrics Dashboard -->
+    <div class="metrics-dashboard">
+      <div class="metrics-container">
+        <div class="metrics-group">
+          <div class="metric-item">
+            <span class="metric-label">Time</span>
+            <span class="metric-value">{{ time }}</span>
+          </div>
+          <div v-if="serverData['CPU']" class="metric-item">
+            <span class="metric-label">CPU</span>
+            <span class="metric-value">{{ serverData['CPU'][serverData['CPU'].length - 1].value }}%</span>
+          </div>
+          <div v-if="serverData['RAM']" class="metric-item">
+            <span class="metric-label">RAM</span>
+            <span class="metric-value">{{ serverData['RAM'][serverData['RAM'].length - 1].value }}%</span>
+          </div>
+        </div>
 
-      <p class="timeDiv">
-        <span>
-          Time:{{ time }}
-        </span>
-        <span v-if="serverData['CPU']">
-          CPU : {{ serverData['CPU'][serverData['CPU'].length - 1].value }} %
-        </span>
-        <span v-if="serverData['RAM']">
-          RAM : {{ serverData['RAM'][serverData['RAM'].length - 1].value }} %
-        </span>
-        <span v-if="serverData['Redis']">
-          Redis Used : {{ serverData['Redis'][serverData['Redis'].length - 1].used_memory_gb.toFixed(2) }} GB
-        </span>
-        <span v-if="serverData['Redis']">
-          Redis Used Peak : {{ serverData['Redis'][serverData['Redis'].length - 1].used_memory_peak_gb.toFixed(2)
-          }} GB
-        </span>
-        <span v-if="serverData['Redis']">
-          System Memory : {{ serverData['Redis'][serverData['Redis'].length -
-            1].total_system_memory_gb.toFixed(2)
-          }} GB
-        </span>
-        <span v-if="serverData['Redis']">
-          Redis Used Percentage : {{ serverData['Redis'][serverData['Redis'].length -
-            1].memory_percent.toFixed(2)
-          }} %
-        </span>
-        <span v-if="serverData['Redis']">
-          Redis Allocated Memory : {{ serverData['Redis'][serverData['Redis'].length -
-            1].available_memory_gb.toFixed(2)
-          }} GB
-        </span>
-
-      </p>
-      <WarningSignal :signals="pulse_signal" :latency="Latency" :max_latency="max_latency" />
-    </div>
-    <!-- <button @click="showSuccessToast">Show Success Toast</button> -->
-
-    <div class="mx-auto px-8 py-8">
-      <div class="my-8">
-        <!-- <p class="table-heading">Accounts</p> -->
-        <TanStackTestTable title="Accounts" :data="data" :columns="columns"
-          :hasColor="['IdealMTM', 'Day_PL', 'Slippage', 'PNL_PER_UM', 'PNL_PER_M','Slippage1','Slippage2','API DAY PNL','API NET PNL']" :navigateTo="NavigationMap"
-          :showPagination=true :hasRowcolor="{ 'columnName': 'AccountName', 'arrayValues': [] }" />
-
-
+        <div v-if="serverData['Redis']" class="metrics-group">
+          <div class="metric-item">
+            <span class="metric-label">Redis Used</span>
+            <span class="metric-value">{{ serverData['Redis'][serverData['Redis'].length - 1].used_memory_gb.toFixed(2) }} GB</span>
+          </div>
+          <div class="metric-item">
+            <span class="metric-label">Redis Peak</span>
+            <span class="metric-value">{{ serverData['Redis'][serverData['Redis'].length - 1].used_memory_peak_gb.toFixed(2) }} GB</span>
+          </div>
+          <div class="metric-item">
+            <span class="metric-label">System Memory</span>
+            <span class="metric-value">{{ serverData['Redis'][serverData['Redis'].length - 1].total_system_memory_gb.toFixed(2) }} GB</span>
+          </div>
+          <div class="metric-item">
+            <span class="metric-label">Redis Usage</span>
+            <span class="metric-value">{{ serverData['Redis'][serverData['Redis'].length - 1].memory_percent.toFixed(2) }}%</span>
+          </div>
+          <div class="metric-item">
+            <span class="metric-label">Redis Allocated</span>
+            <span class="metric-value">{{ serverData['Redis'][serverData['Redis'].length - 1].available_memory_gb.toFixed(2) }} GB</span>
+          </div>
+        </div>
       </div>
 
+      <WarningSignal 
+        :signals="pulse_signal" 
+        :latency="Latency" 
+        :max_latency="max_latency" 
+        class="warning-signal" 
+      />
+    </div>
+
+    <!-- Main Content Area -->
+    <div class="main-content">
+      <div class="table-section">
+        <TanStackTestTable 
+          title="Accounts" 
+          :data="data" 
+          :columns="columns"
+          :hasColor="['IdealMTM', 'Day_PL', 'Slippage', 'PNL_PER_UM', 'PNL_PER_M', 'Slippage1', 'Slippage2', 'API DAY PNL', 'API NET PNL']" 
+          :navigateTo="NavigationMap"
+          :showPagination="true" 
+          :hasRowcolor="{ 'columnName': 'AccountName', 'arrayValues': [] }" 
+        />
+      </div>
     </div>
   </div>
 </template>
 
-
-<style>
-html {
-  font-size: 14px;
+<style scoped>
+.homepage-container {
+  min-height: 100vh;
+  background-color: #f8fafc;
+  padding: 1.5rem;
 }
 
-.opening-brac {
-  padding-right: 3px;
+/* Index Cards Styling */
+.index-cards-container {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 1rem;
+  padding: 1rem;
+  background: white;
+  border-radius: 12px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
 }
 
-.closing-brac {
-  padding-left: 3px;
+.index-card {
+  background: white;
+  padding: 1rem;
+  border-radius: 8px;
+  border: 1px solid rgba(229, 231, 235, 0.5);
+  transition: transform 0.2s, box-shadow 0.2s;
 }
 
-.index-value-container {
-  display: flex;
-  gap: 5px;
-  justify-items: center;
-  align-items: center;
-
+.index-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
 }
 
-.nav-index-container {
-  display: flex;
-  flex-wrap: wrap;
-  justify-content: space-around;
-  padding: 10px;
+.index-header {
+  font-weight: 600;
+  color: #1e293b;
+  margin-bottom: 0.5rem;
+  font-size: 0.9rem;
 }
 
-.index-item {
+.index-content {
   display: flex;
   flex-direction: column;
-  align-items: center;
-  margin: 10px;
-  position: relative;
-  min-width: 150px;
-}
-
-.index-name {
-  font-weight: bold;
-  margin-bottom: 5px;
-}
-
-.image_width {
-  width: 10px;
-  height: auto;
+  gap: 0.5rem;
 }
 
 .index-value {
-  font-size: 1.0em;
+  font-size: 1.25rem;
+  font-weight: 700;
 }
 
-.percentage {
-  font-size: 1.0em;
+.index-change {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
 }
 
+.trend-icon {
+  width: 12px;
+  height: auto;
+}
+
+/* Metrics Dashboard Styling */
+.metrics-dashboard {
+  margin-top: 1.5rem;
+  padding: 1.5rem;
+  background: white;
+  border-radius: 12px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+.metrics-container {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 2rem;
+}
+
+.metrics-group {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1.5rem;
+  padding: 1rem;
+  background: #f8fafc;
+  border-radius: 8px;
+  border: 1px solid rgba(229, 231, 235, 0.5);
+}
+
+.metric-item {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  min-width: 150px;
+}
+
+.metric-label {
+  font-size: 0.875rem;
+  color: #64748b;
+  font-weight: 500;
+}
+
+.metric-value {
+  font-size: 1rem;
+  color: #0f172a;
+  font-weight: 600;
+}
+
+/* Main Content Styling */
+.main-content {
+  margin-top: 1.5rem;
+}
+
+.table-section {
+  background: white;
+  border-radius: 12px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  padding: 1.5rem;
+}
+
+/* Status Colors */
 .positive {
-  color: #39a97c;
+  color: #10b981;
 }
 
 .negative {
-  color: #d95858;
+  color: #ef4444;
 }
 
 .neutral {
-  color: #9e9e9e;
+  color: #6b7280;
 }
 
-
-.table-heading {
-  font-size: 22px;
-  font-weight: 600;
-  margin-left: 30px;
+.percentage-bracket {
+  color: inherit;
+  opacity: 0.8;
+  margin-left: 0.25rem;
 }
 
-
-.nav_index_container {
-  /* padding-top: 20px; */
-  display: flex;
-  margin-top: 10px;
-  align-items: center;
-  /* gap: 60px; */
-  padding: 10px 30px;
-  font-size: 16px;
-  justify-content: space-between;
+/* Warning Signal Styling */
+.warning-signal {
+  margin-top: 1rem;
 }
 
-.time-container {
-  display: flex;
-  margin-top: 20px;
-  margin-left: 30px;
-  font-weight: 600;
-}
+/* Responsive Design */
+@media (max-width: 768px) {
+  .homepage-container {
+    padding: 1rem;
+  }
 
-.timeDiv {
-  justify-content: center;
-  align-items: flex-start;
-  display: flex;
-  flex-direction: column;
-  width: 100%;
+  .metrics-group {
+    width: 100%;
+  }
 
-}
-
-
-.select-container {
-  display: flex;
-  width: 100%;
-  align-items: flex-end;
-  justify-content: flex-end;
-  padding: 10px;
+  .metric-item {
+    min-width: 120px;
+  }
 }
 </style>

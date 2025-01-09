@@ -455,153 +455,215 @@ watch(selectedBasketItems, (newSelectedBasketItems) => {
 });
 </script>
 <template>
-  <div class="px-8 py-8 pageContainer">
-
-    <div class="heading-container">
-      <p class="table-heading LagButton" @click="LagPageHandler()">Lags </p>
-    </div>
-
-    <div class="my-8">
-      <TanStackTestTable title="Account Details" :data="data" :columns="columns"
-        :hasColor="['IdealMTM', 'Day_PL', 'Slippage', 'PNL_PER_UM', 'PNL_PER_M','Slippage1','Slippage2']" :navigateTo="[]" :showPagination=false
-        :hasRowcolor="{ 'columnName': 'AccountName', 'arrayValues': [] }" />
-    </div>
-    <!--  <input type="date" v-model="date" /> -->
-
-    <div class="chartContainer">
-      <p class="table-heading">MTM AND IDEAL MTM</p>
-      <LightWeightChart v-if="user_data['MTMTable']" :Chartdata="mix_real_ideal_mtm_table" />
-    </div>
-
-
-
-    <!--  <BarChart v-if="user_data['Live_Client_Positions']" :chartData='user_data["Live_Client_Positions"]' /> -->
-    <div class="LatencyTable">
-      <p> Client Latency :<span class="latencyvalue">{{ client_latency }}</span></p>
-      <p> Max Client :<span class="latencyvalue">{{ max_client_latency }}</span></p>
-      <p> Client Detail Latency: <span class="latencyvalue">{{ client_details_Latency }}</span></p>
-      <p> Max Client Detail Latency :<span class="latencyvalue"> {{ max_client_details_latency }}</span></p>
-      <p> Basket Detail Latency :<span class="latencyvalue"> {{ basket_latency }}</span></p>
-      <p> Max Basket Latency :<span class="latencyvalue"> {{ basket_max_latency }}</span></p>
-      <p> Strategy Detail Latency :<span class="latencyvalue"> {{ strategy_latency }}</span></p>
-      <p> Max Strategy Latency :<span class="latencyvalue"> {{ strategy_max_latency }}</span></p>
-    </div>
-    <div class="navContainer">
-      <NavBar
-        :navColumns="['Positions', 'Order', 'Combined DF', 'Combined Orders', 'Combined Trades', 'Fund Summary','Zerodha Order Book','Holdings']"
-        @column-clicked="handleColumnClick" :colorColumns="[]" />
-    </div>
-    <div class="selectContainer" v-if="book && showOnPage === 'Combined DF' && filteredSignalBookData.length">
-      <a-select v-model:value="selectedBasketItems" mode="multiple" placeholder="Select Basket Items"
-        style="width: 100%; margin-bottom: 10px;"
-        :options="filteredBasketOptions.map(item => ({ value: item }))"></a-select>
-      <a-select v-model:value="selectedUids" mode="multiple" placeholder="Select UIDs" style="width: 100%"
-        :options="filteredOptions.map(item => ({ value: item }))"></a-select>
-    </div>
-
-
-    <div class="my-8" v-if="book && showOnPage === 'Positions'">
-      <p class="table-heading">Live MTM : <span :class="position_sum > 0 ? 'green' : 'red'">{{ position_sum }}</span>
-      </p>
-      <TanStackTestTable title="Position" :data="book" :columns="rms_df_columns" :hasColor="['pnl']" :navigateTo="[]"
-        :showPagination=true />
-    </div>
-<!-- 
-    <div class="my-8" v-if="book && showOnPage === 'TradeBook'">
-      <TanStackTestTable title="Complete Trade Book" :data="book"
-        :columns="broker === 'xts' ? live_trade_book_columns_xts : live_trade_book_columns_zerodha" :hasColor="[]"
-        :navigateTo="[]" :showPagination=true />
-    </div> -->
-
-    <div class="my-8" v-if="book && showOnPage === 'Order'">
-      <TanStackTestTable title="Complete Order Book" :data="book"
-        :columns="broker === 'xts' ? live_order_book_columns_xts : live_order_book_columns_zerodha" :hasColor="[]"
-        :navigateTo="[]" :showPagination=true />
-    </div>
-    <div class="my-8" v-if="book && showOnPage === 'Fund Summary'">
-      <TanStackTestTable title="Fund Summary" :data="book" :columns="fund_summary_columns"
-        :hasColor="['Actual MTM','Ideal MTM']" :navigateTo="[]" :showPagination=true />
-    </div>
-    <div class="my-8" v-if="book && showOnPage === 'Zerodha Order Book'">
-      <TanStackTestTable title="Zerodha Order Book" :data="book" :columns="zerodha_order_book_columns"
-        :hasColor="[]" :navigateTo="[]" :showPagination=true />
-    </div>
-
-    <div class="my-8" v-if="book && showOnPage === 'Holdings'">
-      <TanStackTestTable title="Holdings" :data="book" :columns="holding_book_columns"
-        :hasColor="[]" :navigateTo="[]" :showPagination=true />
-    </div>
-
-    <div class="my-8" v-if="book && showOnPage === 'Combined DF' && filteredSignalBookData.length">
-      <TanStackTestTable title="Combined DF" :data="filteredSignalBookData"
-        :columns="broker === 'xts' ? combined_df_columns_xts : combined_df_columns_zerodha" :hasColor="[]"
-        :navigateTo="[]" :showPagination=true />
-    </div>
-
-    <div class="my-8" v-if="book && showOnPage === 'Combined Orders'">
-      <TanStackTestTable title="Combined Orders" :data="book"
-        :columns="broker === 'xts' ? combined_order_xts : combined_order_zerodha" :hasColor="[]" :navigateTo="[]"
-        :showPagination=true />
-    </div>
-
-    <div class="my-8" v-if="book && showOnPage === 'Combined Trades'">
-      <TanStackTestTable title="Combined Trades" :data="book"
-        :columns="broker === 'xts' ? combined_trades_xts : combined_trades_zerodha" :hasColor="[]" :navigateTo="[]"
-        :showPagination=true />
-    </div>
-
-    <div class="signalPosContainer" v-if="signal_position_tables">
-      <p class="table-heading">Signal Positions</p>
-      <div class="multiselectContainer">
-        <a-select v-model:value="selectedSignalPositions" mode="multiple" placeholder="Select Baskets"
-          style="width: 100%" :options="Object.keys(signal_position_tables).map(item => ({ value: item }))"></a-select>
+  <div class="min-h-screen bg-gray-50">
+    <!-- Main Container -->
+    <div class="px-6 py-8 lg:px-8">
+      <!-- Header Section -->
+      <div class="flex justify-between items-center mb-8">
+        <h1 class="text-2xl font-semibold text-gray-900">User Dashboard</h1>
+        <button 
+          @click="LagPageHandler"
+          class="px-4 py-2 bg-red-500 hover:bg-red-600 text-white rounded-lg shadow-sm transition-all duration-200 flex items-center gap-2"
+        >
+          <span>Lags</span>
+        </button>
       </div>
-      <div v-for=" (basket, index) in signal_position_tables" :key="index">
-        <div class="my-8" v-if="selectedSignalPositions.includes(index)">
-          <TanStackTestTable :title="index" :data="basket" :columns="signal_position" :hasColor="['IdealQuantity']"
-            :navigateTo="[]" :showPagination=true />
+
+      <!-- Account Details Section -->
+      <div class="bg-white rounded-lg shadow-sm mb-8 p-6">
+        <h2 class="text-lg font-medium mb-4">Account Details</h2>
+        <TanStackTestTable 
+          title="Account Details" 
+          :data="data" 
+          :columns="columns"
+          :hasColor="['IdealMTM', 'Day_PL', 'Slippage', 'PNL_PER_UM', 'PNL_PER_M', 'Slippage1', 'Slippage2']"
+          :navigateTo="[]"
+          :showPagination="false"
+          :hasRowcolor="{ 'columnName': 'AccountName', 'arrayValues': [] }"
+        />
+      </div>
+
+      <!-- MTM Chart Section -->
+      <div v-if="user_data['MTMTable']" class="bg-white rounded-lg shadow-sm mb-8 p-6">
+        <h2 class="text-lg font-medium mb-4">MTM AND IDEAL MTM</h2>
+        <LightWeightChart :Chartdata="mix_real_ideal_mtm_table" />
+      </div>
+
+      <!-- Latency Stats Grid -->
+      <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+        <div class="bg-white rounded-lg p-4 shadow-sm">
+          <p class="text-sm text-gray-600">Client Latency</p>
+          <p class="text-lg font-semibold text-gray-900">{{ client_latency }}</p>
+        </div>
+        <div class="bg-white rounded-lg p-4 shadow-sm">
+          <p class="text-sm text-gray-600">Max Client</p>
+          <p class="text-lg font-semibold text-gray-900">{{ max_client_latency }}</p>
+        </div>
+        <div class="bg-white rounded-lg p-4 shadow-sm">
+          <p class="text-sm text-gray-600">Client Detail Latency</p>
+          <p class="text-lg font-semibold text-gray-900">{{ client_details_Latency }}</p>
+        </div>
+        <div class="bg-white rounded-lg p-4 shadow-sm">
+          <p class="text-sm text-gray-600">Max Client Detail</p>
+          <p class="text-lg font-semibold text-gray-900">{{ max_client_details_latency }}</p>
+        </div>
+        <div class="bg-white rounded-lg p-4 shadow-sm">
+          <p class="text-sm text-gray-600">Basket Detail Latency</p>
+          <p class="text-lg font-semibold text-gray-900">{{ basket_latency }}</p>
+        </div>
+        <div class="bg-white rounded-lg p-4 shadow-sm">
+          <p class="text-sm text-gray-600">Max Basket Latency</p>
+          <p class="text-lg font-semibold text-gray-900">{{ basket_max_latency }}</p>
+        </div>
+        <div class="bg-white rounded-lg p-4 shadow-sm">
+          <p class="text-sm text-gray-600">Strategy Detail Latency</p>
+          <p class="text-lg font-semibold text-gray-900">{{ strategy_latency }}</p>
+        </div>
+        <div class="bg-white rounded-lg p-4 shadow-sm">
+          <p class="text-sm text-gray-600">Max Strategy Latency</p>
+          <p class="text-lg font-semibold text-gray-900">{{ strategy_max_latency }}</p>
+        </div>
+      </div>
+
+      <!-- Navigation Section -->
+      <div class="mb-8">
+        <NavBar
+          :navColumns="['Positions', 'Order', 'Combined DF', 'Combined Orders', 'Combined Trades', 'Fund Summary', 'Zerodha Order Book', 'Holdings']"
+          @column-clicked="handleColumnClick"
+          :colorColumns="[]"
+          class="bg-white rounded-lg shadow-sm p-2"
+        />
+      </div>
+
+      <!-- Filters Section for Combined DF -->
+      <div v-if="book && showOnPage === 'Combined DF' && filteredSignalBookData.length" class="bg-white rounded-lg shadow-sm mb-8 p-6">
+        <div class="flex flex-col gap-4">
+          <a-select
+            v-model:value="selectedBasketItems"
+            mode="multiple"
+            placeholder="Select Basket Items"
+            class="w-full"
+            :options="filteredBasketOptions.map(item => ({ value: item }))"
+          />
+          <a-select
+            v-model:value="selectedUids"
+            mode="multiple"
+            placeholder="Select UIDs"
+            class="w-full"
+            :options="filteredOptions.map(item => ({ value: item }))"
+          />
+        </div>
+      </div>
+
+      <!-- Positions Section -->
+      <div v-if="book && showOnPage === 'Positions'" class="bg-white rounded-lg shadow-sm mb-8 p-6">
+        <div class="flex justify-between items-center mb-4">
+          <h2 class="text-lg font-medium">Live MTM</h2>
+          <span :class="position_sum > 0 ? 'text-green-500' : 'text-red-500'" class="text-xl font-semibold">
+            {{ position_sum }}
+          </span>
+        </div>
+        <TanStackTestTable
+          title="Position"
+          :data="book"
+          :columns="rms_df_columns"
+          :hasColor="['pnl']"
+          :navigateTo="[]"
+          :showPagination="true"
+        />
+      </div>
+
+      <!-- Order Book Section -->
+      <div v-if="book && showOnPage === 'Order'" class="bg-white rounded-lg shadow-sm mb-8 p-6">
+        <h2 class="text-lg font-medium mb-4">Order Book</h2>
+        <TanStackTestTable
+          title="Complete Order Book"
+          :data="book"
+          :columns="broker === 'xts' ? live_order_book_columns_xts : live_order_book_columns_zerodha"
+          :hasColor="[]"
+          :navigateTo="[]"
+          :showPagination="true"
+        />
+      </div>
+
+      <!-- Signal Positions Section -->
+      <div v-if="signal_position_tables" class="bg-white rounded-lg shadow-sm mb-8 p-6">
+        <h2 class="text-lg font-medium mb-4">Signal Positions</h2>
+        <div class="mb-4">
+          <a-select
+            v-model:value="selectedSignalPositions"
+            mode="multiple"
+            placeholder="Select Baskets"
+            class="w-full"
+            :options="Object.keys(signal_position_tables).map(item => ({ value: item }))"
+          />
+        </div>
+        <div v-for="(basket, index) in signal_position_tables" :key="index">
+          <div v-if="selectedSignalPositions.includes(index)" class="mt-4">
+            <TanStackTestTable
+              :title="index"
+              :data="basket"
+              :columns="signal_position"
+              :hasColor="['IdealQuantity']"
+              :navigateTo="[]"
+              :showPagination="true"
+            />
+          </div>
+        </div>
+      </div>
+
+      <!-- Chart Sections -->
+      <div class="space-y-8">
+        <div v-if="Object.keys(basket_chart_data).length > 0" class="bg-white rounded-lg shadow-sm p-6">
+          <h2 class="text-lg font-medium mb-4">BASKET WISE IDEAL MTM</h2>
+          <LightWeightChart :Chartdata="basket_chart_data" />
+        </div>
+
+        <div v-if="Object.keys(strategy_chart_data).length > 0" class="bg-white rounded-lg shadow-sm p-6">
+          <h2 class="text-lg font-medium mb-4">STRATEGY WISE IDEAL MTM</h2>
+          <LightWeightChart :Chartdata="strategy_chart_data" />
+        </div>
+      </div>
+
+      <!-- Strategy Selection Section -->
+      <div class="bg-white rounded-lg shadow-sm mb-8 p-6">
+        <div class="mb-4">
+          <a-select
+            v-model:value="selectedStrategies"
+            mode="multiple"
+            placeholder="Select Strategies"
+            class="w-full"
+            :options="filteredStrategyOptions.map(item => ({ value: item }))"
+          />
+        </div>
+        <div v-if="Object.keys(strategyData).length > 0">
+          <TanStackTestTable
+            title="Current Strategy Ideal MTM"
+            :data="filteredData"
+            :columns="curr_strategy_mtm"
+            :hasColor="['MTM']"
+            :navigateTo="[]"
+            :showPagination="true"
+          />
+        </div>
+      </div>
+
+      <!-- Histograms Section -->
+      <div v-if="showOnPage === 'Combined DF'" class="space-y-8">
+        <div v-if="histogram_order_fill_lag.length > 0" class="bg-white rounded-lg shadow-sm p-6">
+          <h2 class="text-lg font-medium mb-4">Histogram Of Order Fill Lag Combined DF</h2>
+          <Histogram :dataArray="histogram_order_fill_lag" />
+        </div>
+
+        <div v-if="histogram.length > 0" class="bg-white rounded-lg shadow-sm p-6">
+          <h2 class="text-lg font-medium mb-4">Histogram Of Signal Lag Combined DF</h2>
+          <Histogram :dataArray="histogram" />
         </div>
       </div>
     </div>
-
-
-    <div class="chartContainer">
-      <p class="table-heading">BASKET WISE IDEAL MTM</p>
-      <LightWeightChart v-if="Object.keys(basket_chart_data).length > 0" :Chartdata="basket_chart_data" />
-    </div>
-
-    <div class="chartContainer">
-      <p class="table-heading">Strategy WISE IDEAL MTM</p>
-      <LightWeightChart v-if="Object.keys(strategy_chart_data).length > 0" :Chartdata="strategy_chart_data" />
-    </div>
-
-
-    <div class="my-8" v-if="Object.keys(basketData).length > 0">
-      <TanStackTestTable title="Current Basket Ideal MTM" :data="basketData['curr']" :columns="curr_basket_mtm"
-        :hasColor="['MTM']" :navigateTo="[]" :showPagination=true />
-    </div>
-
-    <div class="selectContainer">
-      <a-select v-model:value="selectedStrategies" mode="multiple" placeholder="Select Strategies"
-        style="width: 100%; margin-bottom: 10px;"
-        :options="filteredStrategyOptions.map(item => ({ value: item }))"></a-select>
-    </div>
-    <div class="my-8" v-if="Object.keys(strategyData).length > 0">
-      <TanStackTestTable title="Current Strategy Ideal MTM" :data="filteredData" :columns="curr_strategy_mtm"
-        :hasColor="['MTM']" :navigateTo="[]" :showPagination=true />
-    </div>
-    <div v-if="histogram_order_fill_lag.length > 0 && showOnPage === 'Combined DF'" class="histogram-container">
-      <p class="table-heading">Histogram Of Order Fill Lag Combined DF</p>
-      <Histogram :dataArray="histogram_order_fill_lag" />
-    </div>
-
-    <div v-if="histogram.length > 0 && showOnPage === 'Combined DF'" class="histogram-container">
-      <p class="table-heading">Histogram Of Signal Lag Combined DF</p>
-      <Histogram :dataArray="histogram" />
-    </div>
-
   </div>
 </template>
+
 <style scoped>
 .pageContainer {
   height: 100%;

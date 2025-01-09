@@ -204,274 +204,844 @@ onUnmounted(() => {
 })
 
 </script>
-
 <template>
-    <div>
-        <p class="table-heading">{{ title }}</p>
-        <div class="px-4 sm:px-6 lg:px-8 pb-8 bg-white drop-shadow-sm">
-            <div v-if="showPin" class="column-visibility-controls mb-4 border rounded-md p-4">
-                <div class="mb-2 border-b pb-2">
-                    <label class="flex items-center">
-                        <input
-                        type="checkbox"
-                        :checked="isAllColumnsVisible"
-                        @change="e => toggleAllColumns(e.target.checked)"
-                        class="mr-2"
-                        />
-                        <span>Toggle All</span>
-                    </label>
-                </div>
-                <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2">
-                    <div v-for="column in table.getAllLeafColumns()" :key="column.id">
+    <div class="modern-table-wrapper">
+        <header class="table-header">
+            <h2 class="table-title">{{ title }}</h2>
+            
+            <!-- Controls Bar -->
+            <div class="controls-bar">
+                <!-- Column Visibility Toggle -->
+                <div v-if="showPin" class="visibility-panel">
+                    <div class="mb-2 border-b pb-2">
                         <label class="flex items-center">
-                        <input
-                            type="checkbox"
-                            :checked="column.getIsVisible()"
-                            @change="column.toggleVisibility()"
-                            class="mr-2"
-                        />
-                        <span>{{ column.id }}</span>
+                            <input
+                                type="checkbox"
+                                :checked="isAllColumnsVisible"
+                                @change="e => toggleAllColumns(e.target.checked)"
+                                class="mr-2"
+                            />
+                            <span>Toggle All</span>
                         </label>
+                    </div>
+                    
+                    <div v-if="showPin" class="columns-grid">
+                        <div v-for="column in table.getAllLeafColumns()" 
+                             :key="column.id" 
+                             class="column-option">
+                            <label class="flex items-center">
+                                <input
+                                    type="checkbox"
+                                    :checked="column.getIsVisible()"
+                                    @change="column.toggleVisibility()"
+                                    class="mr-2"
+                                />
+                                <span>{{ column.id }}</span>
+                            </label>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Search and Download -->
+                <div class="table-actions">
+                    <div class="search-box" v-if="showPagination">
+                        <i class="ph-bold ph-magnifying-glass search-icon"></i>
+                        <input 
+                            type="text" 
+                            class="search-input" 
+                            placeholder="Search in table..."
+                            v-model="filter" 
+                        />
+                    </div>
+                    
+                    <div class="action-buttons">
+                        <button @click="download('csv')" class="action-btn csv">
+                            <i class="ph-bold ph-file-csv"></i>
+                            <span>CSV</span>
+                        </button>
+                        <button @click="download('xlsx')" class="action-btn excel">
+                            <i class="ph-bold ph-file-excel"></i>
+                            <span>Excel</span>
+                        </button>
                     </div>
                 </div>
             </div>
+        </header>
 
-            <div class="mt-8 flow-root">
-                <div class="my-4 headingContainer">
-                    <input type="text" class="border border-gray-400 rounded px-2 py-2" placeholder="Search"
-                        v-model="filter" v-if="showPagination" />
-                    <button @click="download('csv')"
-                        class="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded">
-                        Download CSV
-                    </button>
-                    <button @click="download('xlsx')"
-                        class="bg-green-500 hover:bg-green-700 text-white font-bold py-2 px-4 rounded">
-                        Download Excel
-                    </button>
+        <!-- Table Container -->
+        <div class="table-container" @wheel="handleMouseWheel">
+            <div class="inline-block min-w-full py-2 align-middle">
+                <table class="min-w-full divide-y divide-gray-300">
+                    <thead>
+                        <tr v-for="headerGroup in table.getHeaderGroups()" :key="headerGroup.id">
+                            <th v-for="header in headerGroup.headers" 
+                                :key="header.id" 
+                                scope="col"
+                                class="whitespace-nowrap px-3 py-3.5 text-left text-sm font-semibold text-gray-900 borderright textcenter"
+                                :class="{
+                                    'cursor-pointer select-none': header.column.getCanSort(),
+                                    'sticky-header': header.index === 0,
+                                }" 
+                                @click="header.column.getToggleSortingHandler()?.($event)">
+                                <FlexRender 
+                                    :render="header.column.columnDef.header"
+                                    :props="header.getContext()" 
+                                />
+                                {{ { asc: ' ↑', desc: '↓' }[header.column.getIsSorted()] }}
+                            </th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-gray-200">
+                        <tr v-for="row in rows" :key="row.id">
+                            <td v-for="(cell, index) in row.getVisibleCells()" 
+                                :key="cell.id"
+                                class="maxwidth150 minwidhth100 break-words whitespace-normal px-3 py-4 text-sm text-black-600 textcenter"
+                                :class="{
+                                    'sticky-column': index === 0,
+                                    'red': cell.getValue() < 0 && hasColor.includes(cell.id.split('_').slice(1).join('_')),
+                                    'green': cell.getValue() > 0 && hasColor.includes(cell.id.split('_').slice(1).join('_')),
+                                    'cursorpointer': tellnav(cell)
+                                }"
+                                @click="checkNavigate(cell)">
+                                <template v-if="cell.getValue() !== undefined">
+                                    {{ typeof cell.getValue() === 'number' ? formatIndianNumber(cell.getValue()) : cell.getValue() }}
+                                </template>
+                                <template v-else>
+                                    N/A
+                                </template>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
 
-                </div>
-
-                <div class="table-container -mx-4 -my-2 overflow-x-auto overflow-y-auto sm:-mx-6 lg:-mx-8">
-                    <div class="inline-block min-w-full py-2 align-middle sm:px-6 lg:px-8">
-                        <table class="min-w-full divide-y divide-gray-300">
-                            <thead>
-                                <tr v-for="headerGroup in table.getHeaderGroups()" :key="headerGroup.id">
-                                    <th v-for="header in headerGroup.headers" :key="header.id" scope="col"
-                                        class="whitespace-nowrap px-3 py-3.5 text-left text-sm font-semibold text-gray-900 borderright textcenter"
-                                        :class="{
-                                            'cursor-pointer select-none': header.column.getCanSort(),
-                                            'sticky-header': header.index === 0,
-                                        }" @click="header.column.getToggleSortingHandler()?.($event)">
-                                        <FlexRender :render="header.column.columnDef.header"
-                                            :props="header.getContext()" />
-                                        {{ { asc: ' ↑', desc: '↓' }[header.column.getIsSorted()] }}
-                                    </th>
-                                </tr>
-                            </thead>
-                            <tbody class="divide-y divide-gray-200">
-                                <tr v-for="row in rows" :key="row.id">
-                                    <td v-for="(cell, index) in row.getVisibleCells()" :key="cell.id"
-                                        class="maxwidth150 minwidhth100 break-words whitespace-normal px-3 py-4 text-sm text-black-600 textcenter"
-                                        :class="{
-                                            'sticky-column': index === 0,
-                                            'red': cell.getValue() < 0 && hasColor.includes(cell.id.split('_').slice(1).join('_')),
-                                            'green': cell.getValue() > 0 && hasColor.includes(cell.id.split('_').slice(1).join('_')),
-                                            'cursorpointer': tellnav(cell)
-                                        }" @click="checkNavigate(cell)">
-                                        <template v-if="cell.getValue() !== undefined">
-                                            {{ typeof cell.getValue() === 'number' ? formatIndianNumber(cell.getValue())
-                                            : cell.getValue() }}
-                                        </template>
-
-                                        <template v-else>
-                                            N/A
-                                        </template>
-                                    </td>
-                                </tr>
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
-                <div class="mt-8" v-if="showPagination">
-                    Page {{ currentPage + 1 }} of {{ pageCount }} -
-                    {{ table.getFilteredRowModel().rows.length }} results
-                </div>
-                <div class="mt-8 space-x-4" v-if="showPagination">
-                    <button
-                        class="border border-gray-300 rounded px-2 py-2 disabled:opacity-50 disabled:cursor-not-allowed"
-                        @click="setPageSize(5)">
-                        Page Size 5
-                    </button>
-                    <button
-                        class="border border-gray-300 rounded px-2 py-2 disabled:opacity-50 disabled:cursor-not-allowed"
-                        @click="setPageSize(10)">
-                        Page Size 10
-                    </button>
-                    <button
-                        class="border border-gray-300 rounded px-2 py-2 disabled:opacity-50 disabled:cursor-not-allowed"
-                        @click="setPageSize(20)">
-                        Page Size 20
+        <!-- Pagination -->
+        <div v-if="showPagination" class="pagination-section">
+            <div class="pagination-info">
+                <span class="current-page">Page {{ currentPage + 1 }} of {{ pageCount }}</span>
+                <span class="results-count">{{ table.getFilteredRowModel().rows.length }} results</span>
+            </div>
+            
+            <div class="page-size-selector">
+                <span class="selector-label">Rows per page:</span>
+                <div class="size-buttons">
+                    <button v-for="size in [5, 10, 20]" 
+                            :key="size"
+                            @click="setPageSize(size)"
+                            :class="['size-btn', { active: pageSize === size }]"
+                    >
+                        {{ size }}
                     </button>
                 </div>
-                <div class="space-x-4 mt-8" v-if="showPagination">
-                    <button
-                        class="border border-gray-300 rounded px-2 py-2 disabled:opacity-50 disabled:cursor-not-allowed"
-                        @click="currentPage = 0">
-                        First page
-                    </button>
-                    <button
-                        class="border border-gray-300 rounded px-2 py-2 disabled:opacity-50 disabled:cursor-not-allowed"
-                        @click="currentPage = pageCount - 1">
-                        Last page
-                    </button>
-                    <button
-                        class="border border-gray-300 rounded px-2 py-2 disabled:opacity-50 disabled:cursor-not-allowed"
-                        :disabled="currentPage === 0" @click="previousPage">
-                        Prev page
-                    </button>
-                    <button
-                        class="border border-gray-300 rounded px-2 py-2 disabled:opacity-50 disabled:cursor-not-allowed"
-                        :disabled="currentPage === pageCount - 1" @click="nextPage">
-                        Next page
-                    </button>
-                </div>
+            </div>
+            
+            <div class="pagination-controls">
+                <button class="page-btn" 
+                        @click="currentPage = 0"
+                        :disabled="currentPage === 0">
+                    <i class="ph-bold ph-caret-double-left"></i>
+                </button>
+                <button class="page-btn" 
+                        @click="previousPage"
+                        :disabled="currentPage === 0">
+                    <i class="ph-bold ph-caret-left"></i>
+                </button>
+                
+                <span class="page-indicator">{{ currentPage + 1 }}</span>
+                
+                <button class="page-btn" 
+                        @click="nextPage"
+                        :disabled="currentPage === pageCount - 1">
+                    <i class="ph-bold ph-caret-right"></i>
+                </button>
+                <button class="page-btn" 
+                        @click="currentPage = pageCount - 1"
+                        :disabled="currentPage === pageCount - 1">
+                    <i class="ph-bold ph-caret-double-right"></i>
+                </button>
             </div>
         </div>
     </div>
-
 </template>
 
 <style scoped>
-.colorcontainer {
-    background: pink;
-}
-/* Add these styles to your existing <style> section */
-.column-visibility-controls {
-  background-color: white;
-  border-color: #e5e7eb;
+.modern-table-wrapper {
+    background: white;
+    border-radius: 12px;
+    box-shadow: 0 4px 24px rgba(0, 0, 0, 0.05);
+    padding: 1.5rem;
 }
 
-.column-visibility-controls label {
-  cursor: pointer;
-  font-size: 0.875rem;
-  color: #374151;
+/* Header Styles */
+.table-header {
+    margin-bottom: 1.5rem;
 }
 
-.column-visibility-controls input[type="checkbox"] {
-  cursor: pointer;
-}
-.red {
-    color: red;
-}
-
-.textcenter {
-    text-align: center;
-}
-
-.table-heading {
-    font-size: 22px;
+.table-title {
+    font-size: 1.5rem;
     font-weight: 600;
-    margin-left: 30px;
+    color: #1e293b;
+    margin-bottom: 1.25rem;
 }
 
-.green {
-    color: rgb(80, 185, 80);
+.controls-bar {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 1rem;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1rem;
 }
 
-.redbackground {
-    background-color: rgb(255, 215, 215) !important;
+/* Visibility Panel */
+.visibility-panel {
+    position: relative;
 }
 
-.greenbackground {
-    background-color: rgb(217, 246, 217) !important;
-}
-.cursorpointer {
+.toggle-visibility-btn {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.625rem 1rem;
+    background: white;
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    font-size: 0.875rem;
+    color: #475569;
     cursor: pointer;
     transition: all 0.2s ease;
 }
 
-.cursorpointer:hover {
-    text-decoration: underline;
-}
-table {
-    border-right: none;
-    border-left: none;
+.toggle-visibility-btn:hover {
+    background: #f8fafc;
+    border-color: #cbd5e1;
 }
 
-::-webkit-scrollbar {
-    width: 2px;
-    height: 2px;
-}
-
-/* Track */
-::-webkit-scrollbar-track {
-    background: #f1f1f1;
-}
-
-/* Handle */
-::-webkit-scrollbar-thumb {
-    background: #888;
-    border-radius: 3px;
-}
-
-/* Handle on hover */
-::-webkit-scrollbar-thumb:hover {
-    background: #555;
-}
-
-.borderright {
-    border-right: none;
-}
-
-.backred {
-    background: red;
-}
-.minwidhth100{
-    min-width: 100px;
-}
-
-.maxwidth150 {
-   
-    max-width: 150px;
-}
-
-.sticky-header {
-    position: sticky;
-    left: 0;
-    z-index: 1;
+.columns-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    gap: 0.75rem;
+    padding: 1rem;
     background: white;
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    margin-top: 0.5rem;
 }
 
-.sticky-column {
-    position: sticky;
-    left: 0;
-    z-index: 1;
-}
-
-.headingContainer {
+.column-option {
     display: flex;
-    gap: 10px;
-    align-content: flex-end;
-
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 0.875rem;
+    color: #475569;
+    cursor: pointer;
 }
 
-.sticky-column:nth-child(1) {
-    background: white;
+/* Search and Actions */
+.table-actions {
+    display: flex;
+    gap: 1rem;
+    align-items: center;
 }
 
-.sticky-header:nth-child(1) {
-    left: 0px;
-
-    /* Adjust as per the width of the first column */
+.search-box {
+    position: relative;
 }
 
+.search-input {
+    width: 280px;
+    padding: 0.625rem 1rem 0.625rem 2.5rem;
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    font-size: 0.875rem;
+    color: #1e293b;
+    transition: all 0.2s ease;
+}
+
+.search-input:focus {
+    outline: none;
+    border-color: #3b82f6;
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+}
+
+.search-icon {
+    position: absolute;
+    left: 0.75rem;
+    top: 50%;
+    transform: translateY(-50%);
+    color: #94a3b8;
+    font-size: 1.125rem;
+}
+
+.action-buttons {
+    display: flex;
+    gap: 0.5rem;
+}
+
+.action-btn {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.625rem 1rem;
+    border: none;
+    border-radius: 8px;
+    font-size: 0.875rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.action-btn.csv {
+    background: #2563eb;
+    color: white;
+}
+
+.action-btn.csv:hover {
+    background: #1d4ed8;
+}
+
+.action-btn.excel {
+    background: #16a34a;
+    color: white;
+}
+
+.action-btn.excel:hover {
+    background: #15803d;
+}
+
+/* Table Styles */
 .table-container {
     overflow-x: auto;
     overflow-y: hidden;
     -webkit-overflow-scrolling: touch;
     max-width: 100%;
     width: 100%;
+    margin: 0 -1.5rem;
+    padding: 0 1.5rem;
 }
+
+/* Base table styles */
+table {
+    border-right: none;
+    border-left: none;
+    width: 100%;
+}
+
+/* Cell widths */
+.maxwidth150 {
+    max-width: 150px;
+}
+
+.minwidhth100 {
+    min-width: 100px;
+}
+
+
+
+/* Text alignment */
+.textcenter {
+    text-align: center;
+}
+
+/* Colors */
+.red {
+    color: #dc2626;
+}
+
+.green {
+    color: #16a34a;
+}
+
+/* Clickable elements */
+.cursorpointer {
+    cursor: pointer;
+    color: #2563eb;
+    transition: all 0.2s ease;
+}
+
+.cursorpointer:hover {
+    text-decoration: underline;
+}
+
+/* Scrollbar */
+::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+}
+
+::-webkit-scrollbar-track {
+    background: #f1f5f9;
+}
+
+::-webkit-scrollbar-thumb {
+    background: #cbd5e1;
+    border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background: #94a3b8;
+}
+
+/* Header Cells */
+.data-table th {
+    background: #f8fafc;
+    padding: 0.875rem 1rem;
+    font-size: 0.875rem;
+    font-weight: 600;
+    color: #475569;
+    text-align: left;
+    border-bottom: 2px solid #e2e8f0;
+    position: relative;
+}
+
+.th-content {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.sort-arrow {
+    color: #94a3b8;
+    font-size: 0.75rem;
+}
+
+.sortable {
+    cursor: pointer;
+    user-select: none;
+}
+
+.sortable:hover {
+    background: #f1f5f9;
+}
+
+/* Table Body */
+.data-table td {
+    padding: 0.875rem 1rem;
+    font-size: 0.875rem;
+    color: #1e293b;
+    border-bottom: 1px solid #f1f5f9;
+}
+
+.table-row:hover td {
+    background: #f8fafc;
+}
+
+.value-positive {
+    color: #16a34a;
+    font-weight: 500;
+}
+
+.value-negative {
+    color: #dc2626;
+    font-weight: 500;
+}
+
+.na-text {
+    color: #94a3b8;
+    font-style: italic;
+}
+
+.clickable {
+    cursor: pointer;
+    color: #2563eb;
+}
+
+.clickable:hover {
+    text-decoration: underline;
+}
+
+/* Pagination Section */
+.pagination-section {
+    margin-top: 1.5rem;
+    padding-top: 1.5rem;
+    border-top: 1px solid #f1f5f9;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 1rem;
+    align-items: center;
+    justify-content: space-between;
+}
+
+.pagination-info {
+    font-size: 0.875rem;
+    color: #475569;
+    display: flex;
+    gap: 0.5rem;
+}
+
+.results-count {
+    color: #94a3b8;
+}
+
+.page-size-selector {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+}
+
+.selector-label {
+    font-size: 0.875rem;
+    color: #475569;
+}
+
+.size-buttons {
+    display: flex;
+    gap: 0.25rem;
+}
+
+.size-btn {
+    padding: 0.375rem 0.75rem;
+    font-size: 0.875rem;
+    border: 1px solid #e2e8f0;
+    background: white;
+    color: #475569;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.size-btn:hover {
+    background: #f8fafc;
+}
+
+.size-btn.active {
+    background: #eff6ff;
+    border-color: #3b82f6;
+    color: #2563eb;
+}
+
+.pagination-controls {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.page-btn {
+    padding: 0.5rem;
+    background: white;
+    border: 1px solid #e2e8f0;
+    border-radius: 6px;
+    color: #475569;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.page-btn:hover:not(:disabled) {
+    background: #f8fafc;
+    color: #2563eb;
+}
+
+.page-btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.page-indicator {
+    padding: 0.5rem 0.75rem;
+    background: #f8fafc;
+    border-radius: 6px;
+    font-size: 0.875rem;
+    color: #1e293b;
+    font-weight: 500;
+}
+
+/* Sticky Elements */
+.sticky-header {
+    position: sticky;
+    left: 0;
+    z-index: 2;
+    background:  white;
+}
+
+.sticky-column {
+    position: sticky;
+    left: 0;
+    z-index: 1;
+    background:  white;
+}
+
+/* Scrollbar Styling */
+::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+}
+
+::-webkit-scrollbar-track {
+    background: #f1f5f9;
+    border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb {
+    background: #cbd5e1;
+    border-radius: 3px;
+    transition: background 0.2s ease;
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background: #94a3b8;
+}
+
+/* Responsive Design */
+@media (max-width: 1024px) {
+    .controls-bar {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 1rem;
+    }
+
+    .table-actions {
+        flex-direction: column;
+        gap: 1rem;
+    }
+
+    .search-box {
+        width: 100%;
+    }
+
+    .search-input {
+        width: 100%;
+    }
+
+    .action-buttons {
+        width: 100%;
+    }
+
+    .action-btn {
+        flex: 1;
+        justify-content: center;
+    }
+
+    .columns-grid {
+        grid-template-columns: repeat(2, 1fr);
+    }
+}
+
+@media (max-width: 768px) {
+    .modern-table-wrapper {
+        padding: 1rem;
+    }
+
+    .pagination-section {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 1.25rem;
+    }
+
+    .pagination-info,
+    .page-size-selector {
+        justify-content: center;
+    }
+
+    .pagination-controls {
+        justify-content: center;
+    }
+
+    .columns-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .data-table th,
+    .data-table td {
+        padding: 0.75rem;
+    }
+}
+
+/* Focus States */
+.search-input:focus,
+.action-btn:focus,
+.page-btn:focus,
+.size-btn:focus {
+    outline: none;
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+}
+
+/* Loading States */
+.table-scroll.loading {
+    position: relative;
+}
+
+.table-scroll.loading::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(255, 255, 255, 0.8);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+/* Empty State */
+tbody:empty::after {
+    content: 'No data available';
+    display: block;
+    text-align: center;
+    padding: 2rem;
+    color: #94a3b8;
+    font-style: italic;
+    grid-column: 1 / -1;
+}
+
+/* Animations */
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(-10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+@keyframes pulse {
+    0% {
+        transform: scale(1);
+    }
+    50% {
+        transform: scale(1.05);
+    }
+    100% {
+        transform: scale(1);
+    }
+}
+
+/* Interactive Elements */
+.clickable {
+    position: relative;
+    overflow: hidden;
+}
+
+.clickable::after {
+    content: '';
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    width: 100%;
+    height: 2px;
+    background: currentColor;
+    transform: scaleX(0);
+    transition: transform 0.2s ease;
+}
+
+.clickable:hover::after {
+    transform: scaleX(1);
+}
+
+/* Print Styles */
+@media print {
+    .modern-table-wrapper {
+        box-shadow: none;
+    }
+
+    .controls-bar,
+    .pagination-section {
+        display: none;
+    }
+
+    .table-scroll {
+        overflow: visible;
+    }
+
+    .data-table {
+        border-collapse: collapse;
+    }
+
+    .data-table th,
+    .data-table td {
+        border: 1px solid #e2e8f0;
+    }
+}
+
+/* Additional Utility Classes */
+.text-ellipsis {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.max-width-cell {
+    max-width: 200px;
+}
+
+.min-width-cell {
+    min-width: 100px;
+}
+
+/* Tooltip for truncated content */
+.text-ellipsis:hover::before {
+    content: attr(data-full-text);
+    position: absolute;
+    bottom: 100%;
+    left: 50%;
+    transform: translateX(-50%);
+    padding: 0.5rem;
+    background: #1e293b;
+    color: white;
+    border-radius: 4px;
+    font-size: 0.75rem;
+    white-space: normal;
+    max-width: 300px;
+    z-index: 10;
+}
+
+/* Custom Checkbox Styling */
+input[type="checkbox"] {
+    width: 16px;
+    height: 16px;
+    border-radius: 4px;
+    border: 2px solid #e2e8f0;
+    appearance: none;
+    cursor: pointer;
+    position: relative;
+    transition: all 0.2s ease;
+}
+
+input[type="checkbox"]:checked {
+    background: #3b82f6;
+    border-color: #3b82f6;
+}
+
+input[type="checkbox"]:checked::after {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%) rotate(45deg);
+    width: 4px;
+    height: 8px;
+    border: solid white;
+    border-width: 0 2px 2px 0;
+}
+
+/* Enhanced Row Hover Effect */
+.table-row {
+    transition: all 0.2s ease;
+}
+
+.table-row:hover {
+    background: rgba(59, 130, 246, 0.05);
+}
+
+/* Sort Indicator Animation */
+.sort-arrow {
+    transition: transform 0.2s ease;
+}
+
+.sorted.asc .sort-arrow {
+    transform: rotate(0deg);
+}
+
+.sorted.desc .sort-arrow {
+    transform: rotate(180deg);
+}
+
 
 
 </style>
