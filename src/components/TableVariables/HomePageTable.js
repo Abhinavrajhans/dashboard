@@ -152,11 +152,6 @@ export const columns = [
       cell: info => info.getValue(),
       header: () => 'Portfolio Value',
     }),
-    columnHelper.accessor(row => row.PositionDayPL, {
-      id: 'PositionDayPL',
-      cell: info => info.getValue(),
-      header: () => 'PositionDayPL',
-    }),
     columnHelper.accessor(row => row.HoldingsDayPL, {
       id: 'HoldingsDayPL',
       cell: info => info.getValue(),
