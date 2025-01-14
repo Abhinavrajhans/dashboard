@@ -14,7 +14,6 @@
           @input="handleSearch"
         />
       </div>
-      
       <!-- Submit Button (Right-aligned) -->
       <div class="submit-container">
         <button 
@@ -31,7 +30,6 @@
       <div class="loader"></div>
       <p>Loading Accounts...</p>
     </div>
-
     <!-- Error State -->
     <div v-if="error" class="error-message">
       {{ error }}
@@ -49,11 +47,11 @@
         </thead>
         <tbody>
           <tr v-for="(account, index) in filteredAccounts" :key="index">
-            <td>{{ account }}</td>
-            <td>{{ marginData['pf'][account] }}</td>
+            <td>{{index}}</td>
+            <td>{{ marginData['pf'][account.user_id] }} </td>
             <td>
               <button 
-                @click="openEditModal(account)"
+                @click="openEditModal(account.user_id)"
                 class="edit-button"
                 :disabled="updateLoading"
               >
@@ -83,11 +81,17 @@ const searchQuery = ref('');
 
 // Computed property for filtered accounts
 const filteredAccounts = computed(() => {
-  if (!searchQuery.value) return accounts.value;
-  return accounts.value.filter(account => 
-    account.toLowerCase().includes(searchQuery.value.toLowerCase())
-  );
+  if (!searchQuery.value) return accounts.value; // Return the original object if no query
+
+  // Filter keys and rebuild the object
+  return Object.keys(accounts.value)
+    .filter(key => key.toLowerCase().includes(searchQuery.value.toLowerCase()))
+    .reduce((filtered, key) => {
+      filtered[key] = accounts.value[key];
+      return filtered;
+    }, {});
 });
+
 
 // Search handler with debounce
 let searchTimeout;
@@ -99,10 +103,35 @@ const handleSearch = () => {
 };
 
 // Submit handler
-const handleSubmit = () => {
-  if (searchQuery.value) {
-    // Add your submit logic here
-    console.log('Submitting search:', searchQuery.value);
+const handleSubmit = async () => {
+  try {
+    const token = localStorage.getItem('access_token');
+    if (!token) {
+      throw new Error('User not authenticated');
+    }
+
+    const response = await fetch('https://api.swancapital.in/UpdateMarginForAllAccounts', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json'
+      }
+    });
+
+    if (!response.ok) {
+      const errorMessage = await response.text();
+      throw new Error(`Error updating margin for all accounts: ${errorMessage}`);
+    }
+
+    alert("All Accounts Margins Updated Successfully!")
+    // Return or handle successful response
+    return await response.json();
+
+
+  } catch (error) {
+    // Remove reference to undefined 'error.value'
+    console.error('Error updating margin:', error.message);
+    throw error; // Re-throw the error to be handled by the caller
   }
 };
 
@@ -126,7 +155,7 @@ const fetchData = async (endpoint, stateRef) => {
     }
 
     const data = await response.json();
-    stateRef.value = endpoint === 'getAccounts' ? Object.keys(data) : (data || []);
+    stateRef.value = (data || []);
   } catch (err) {
     error.value = err.message;
     console.error(`Error fetching ${endpoint}:`, err.message);
