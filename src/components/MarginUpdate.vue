@@ -13,19 +13,21 @@
       {{ error }}
       <button @click="fetchAccounts" class="retry-button">Retry</button>
     </div>
-
     <!-- Users Table -->
     <div v-if="!loading && !error" class="table-container">
       <table class="admin-table">
         <thead>
           <tr>
             <th>Account</th>
+            <th>Portfolio Value</th>
             <th>Actions</th>
+            
           </tr>
         </thead>
         <tbody>
           <tr v-for="(account, index) in accounts" :key="index">
             <td>{{ account }}</td>
+            <td>{{ marginData['pf'][account] }}</td>
             <td>
               <button 
                 @click="openEditModal(account)"
@@ -53,6 +55,7 @@ const editingIndex = ref(-1);
 const updateLoading = ref(false);
 const updateError = ref(null);
 const accounts = ref([]);
+const marginData=ref([])
 
 
 
@@ -93,12 +96,13 @@ const openEditModal = (account) => {
 
 const fetchAccounts = () => fetchData('getAccounts', accounts);
 const fetchBasket = () => fetchData('getBasket', swan_baskets);
+const fetchMarginData =() =>  fetchData("MarginData",marginData );
 
 // Initialize
 onMounted(async () => {
   loading.value = true;
   try {
-    await Promise.all([fetchBasket(), fetchAccounts()]);
+    await Promise.all([fetchBasket(), fetchAccounts(),fetchMarginData()]);
   } finally {
     loading.value = false;
   }
