@@ -270,6 +270,7 @@ const updatePortfolioValue = async () => {
     }
 
     alert("Portfolio value updated successfully!");
+    cancelChanges();
   } catch (err) {
     alert(`Error updating portfolio value: ${err.message}`);
     console.error("Error updating portfolio value:", err.message);

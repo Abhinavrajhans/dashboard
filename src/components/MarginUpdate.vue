@@ -2,6 +2,30 @@
   <div class="admin-container">
     <h1 class="admin-title">Margin Update</h1>
 
+    <!-- Actions Section -->
+    <div class="actions-section">
+      <!-- Search Bar (Left-aligned) -->
+      <div class="search-container">
+        <input 
+          type="text" 
+          v-model="searchQuery" 
+          placeholder="Search accounts..." 
+          class="search-input"
+          @input="handleSearch"
+        />
+      </div>
+      
+      <!-- Submit Button (Right-aligned) -->
+      <div class="submit-container">
+        <button 
+          @click="handleSubmit" 
+          class="submit-button"
+        >
+          Submit
+        </button>
+      </div>
+    </div>
+
     <!-- Loading State -->
     <div v-if="loading" class="loading-state">
       <div class="loader"></div>
@@ -21,11 +45,10 @@
             <th>Account</th>
             <th>Portfolio Value</th>
             <th>Actions</th>
-            
           </tr>
         </thead>
         <tbody>
-          <tr v-for="(account, index) in accounts" :key="index">
+          <tr v-for="(account, index) in filteredAccounts" :key="index">
             <td>{{ account }}</td>
             <td>{{ marginData['pf'][account] }}</td>
             <td>
@@ -55,11 +78,33 @@ const editingIndex = ref(-1);
 const updateLoading = ref(false);
 const updateError = ref(null);
 const accounts = ref([]);
-const marginData=ref([])
+const marginData = ref([]);
+const searchQuery = ref('');
 
+// Computed property for filtered accounts
+const filteredAccounts = computed(() => {
+  if (!searchQuery.value) return accounts.value;
+  return accounts.value.filter(account => 
+    account.toLowerCase().includes(searchQuery.value.toLowerCase())
+  );
+});
 
+// Search handler with debounce
+let searchTimeout;
+const handleSearch = () => {
+  clearTimeout(searchTimeout);
+  searchTimeout = setTimeout(() => {
+    // Additional search logic if needed
+  }, 300);
+};
 
-
+// Submit handler
+const handleSubmit = () => {
+  if (searchQuery.value) {
+    // Add your submit logic here
+    console.log('Submitting search:', searchQuery.value);
+  }
+};
 
 // API functions
 const fetchData = async (endpoint, stateRef) => {
@@ -87,22 +132,23 @@ const fetchData = async (endpoint, stateRef) => {
     console.error(`Error fetching ${endpoint}:`, err.message);
   }
 };
+
 const router = useRouter();
 
 const openEditModal = (account) => {
-  console.log(account); // Print the account details
+  console.log(account);
   router.push("/marginupdate/" + account);
 };
 
 const fetchAccounts = () => fetchData('getAccounts', accounts);
 const fetchBasket = () => fetchData('getBasket', swan_baskets);
-const fetchMarginData =() =>  fetchData("MarginData",marginData );
+const fetchMarginData = () => fetchData("MarginData", marginData);
 
 // Initialize
 onMounted(async () => {
   loading.value = true;
   try {
-    await Promise.all([fetchBasket(), fetchAccounts(),fetchMarginData()]);
+    await Promise.all([fetchBasket(), fetchAccounts(), fetchMarginData()]);
   } finally {
     loading.value = false;
   }
@@ -110,6 +156,84 @@ onMounted(async () => {
 </script>
 
 <style scoped>
+.actions-section {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 24px;
+  gap: 16px;
+}
+
+.search-container {
+  flex: 0 1 300px; /* Allow shrinking but limit initial width */
+}
+
+.submit-container {
+  flex: 0 0 auto; /* Don't grow or shrink */
+}
+
+.search-input {
+  flex: 1;
+  padding: 12px 16px;
+  border: 2px solid #e5e7eb;
+  border-radius: 8px;
+  font-size: 16px;
+  transition: all 0.2s ease;
+  background-color: white;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+}
+
+.search-input:focus {
+  outline: none;
+  border-color: #3b82f6;
+  box-shadow: 0 4px 6px rgba(59, 130, 246, 0.1);
+}
+
+.search-input::placeholder {
+  color: #9ca3af;
+}
+
+.submit-button {
+  padding: 12px 24px;
+  background-color: #3b82f6;
+  color: white;
+  border: none;
+  border-radius: 8px;
+  font-weight: 500;
+  font-size: 16px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  box-shadow: 0 2px 4px rgba(59, 130, 246, 0.2);
+}
+
+.submit-button:hover:not(:disabled) {
+  background-color: #2563eb;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 6px rgba(59, 130, 246, 0.3);
+}
+
+.submit-button:active:not(:disabled) {
+  transform: translateY(0);
+}
+
+.submit-button:disabled {
+  background-color: #9ca3af;
+  cursor: not-allowed;
+  transform: none;
+}
+
+/* Responsive adjustments */
+@media (max-width: 640px) {
+  .search-container {
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .search-input,
+  .submit-button {
+    width: 100%;
+  }
+}
 .admin-container {
   padding: 24px;
 }
