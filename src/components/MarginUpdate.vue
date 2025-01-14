@@ -169,7 +169,7 @@ const openEditModal = (account) => {
   router.push("/marginupdate/" + account);
 };
 
-const fetchAccounts = () => fetchData('getAccounts', accounts);
+const fetchAccounts = () => fetchData('getPositionSizingClients', accounts);
 const fetchBasket = () => fetchData('getBasket', swan_baskets);
 const fetchMarginData = () => fetchData("MarginData", marginData);
 
