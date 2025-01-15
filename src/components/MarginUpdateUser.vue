@@ -1,6 +1,40 @@
 <template>
   <!-- Keeping existing HTML structure -->
   <div class="data-fetch-container bg-gray-50">
+    
+    <!-- Add TOTP Modal -->
+    <!-- TOTP Verification Modal -->
+    <div v-if="showTotpModal" class="modal-overlay">
+      <div class="modal-content">
+        <h2 class="modal-title">Enter Password</h2>
+        <div class="form-group">
+          <input 
+            type="password" 
+            v-model="totpCode"
+            placeholder="Enter password"
+            class="form-input"
+            :class="{ 'input-error': totpError }"
+            @input="totpError = ''"
+           
+          />
+          <span v-if="totpError" class="error-text">{{ totpError }}</span>
+        </div>
+        <div class="modal-actions">
+          <button 
+            @click="showTotpModal = false" 
+            class="cancel-button2"
+          >
+            Cancel
+          </button>
+          <button 
+            @click="updatePortfolioValue" 
+            class="submit-button"
+          >
+            Submit
+          </button>
+        </div>
+      </div>
+    </div>
     <div class="header">
       <h1 class="account-heading">Account: {{ account }}</h1>
       <div class="portfolio-section">
@@ -15,7 +49,7 @@
             :class="{ 'error-input': portfolioError }"
           />
           <button 
-            @click="updatePortfolioValue" 
+            @click="showTotpModal = true" 
             class="update-button"
             :disabled="portfolioError || isUpdatingPortfolio"
           >
@@ -107,7 +141,7 @@
 
       <div class="action-buttons">
         <button 
-          @click="updatePortfolioValue" 
+          @click="showTotpModal = true" 
           class="save-button"
           :disabled="hasErrors || isSaving"
         >
@@ -142,6 +176,12 @@ const portfolioError = ref('');
 const isSaving = ref(false);
 const isUpdatingPortfolio = ref(false);
 const hasUnsavedChanges = ref(false);
+
+
+const showTotpModal = ref(false);
+const totpCode = ref('');
+const totpError = ref('');
+
 
 // Computed properties
 const hasErrors = computed(() => {
@@ -258,6 +298,7 @@ const updatePortfolioValue = async () => {
         "Content-Type": "application/json",
       },
       body: JSON.stringify({ 
+        totp_code: totpCode.value,
         account: account.value, 
         portfolioValue: Number(portfolioValue.value),
         params: filteredData.value
@@ -326,6 +367,207 @@ onMounted(() => {
 </script>
 <style scoped>
 
+
+.submit-button {
+  padding: 12px 24px;
+  background-color: #3b82f6;
+  color: white;
+  border: none;
+  border-radius: 8px;
+  font-weight: 500;
+  font-size: 16px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  box-shadow: 0 2px 4px rgba(59, 130, 246, 0.2);
+}
+
+.submit-button:hover:not(:disabled) {
+  background-color: #2563eb;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 6px rgba(59, 130, 246, 0.3);
+}
+
+.submit-button:active:not(:disabled) {
+  transform: translateY(0);
+}
+
+.submit-button:disabled {
+  background-color: #9ca3af;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.cancel-button2 {
+  padding: 8px 16px;
+  border-radius: 4px;
+  font-weight: 500;
+  transition: all 0.2s;
+  cursor: pointer;
+}
+.cancel-button2 {
+  background-color: #6b7280;
+  color: white;
+  border: none;
+  margin-right: 8px;
+}
+
+.cancel-button2:hover:not(:disabled) {
+  background-color: #4b5563;
+}
+
+
+
+.modal-actions {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 24px;
+  padding-top: 16px;
+  border-top: 1px solid #e5e7eb;
+}
+.error-text {
+  color: #ef4444;
+  font-size: 14px;
+  margin-top: 4px;
+}
+
+
+
+.form-input {
+  width: 100%;
+  padding: 12px;
+  border: 2px solid #e5e7eb;
+  border-radius: 8px;
+  font-size: 16px;
+  transition: all 0.2s ease;
+}
+
+.form-input:focus {
+  outline: none;
+  border-color: #3b82f6;
+  box-shadow: 0 4px 6px rgba(59, 130, 246, 0.1);
+}
+
+.form-input.input-error {
+  border-color: #ef4444;
+}
+
+
+.form-group {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.form-group label {
+  font-size: 14px;
+  font-weight: 500;
+  color: #4b5563;
+}
+
+.form-group input, .form-select {
+  padding: 8px 12px;
+  border: 1px solid #d1d5db;
+  border-radius: 4px;
+  font-size: 14px;
+  color: #1f2937;
+  transition: border-color 0.2s, box-shadow 0.2s;
+  width: 100%;
+}
+
+.form-group input:focus, .form-select:focus {
+  outline: none;
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.1);
+}
+
+.form-group input:disabled, .form-select:disabled {
+  background-color: #f3f4f6;
+  color: #9ca3af;
+  cursor: not-allowed;
+}
+
+
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.5);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 1000;
+}
+
+/* Transitions */
+.modal-overlay {
+  transition: opacity 0.2s ease;
+}
+
+.modal-content {
+  transition: transform 0.2s ease;
+}
+
+.modal-title {
+  font-size: 20px;
+  font-weight: 600;
+  color: #1f2937;
+  margin-bottom: 20px;
+  text-align: center;
+}
+
+/* Accessibility */
+@media (prefers-reduced-motion: reduce) {
+  .loader {
+    animation: none;
+  }
+  
+  .modal-overlay,
+  .modal-content {
+    transition: none;
+  }
+}
+
+.modal-content {
+  background-color: white;
+  padding: 24px;
+  border-radius: 8px;
+  width: 90%;
+  max-width: 600px;
+  max-height: 90vh;
+  overflow-y: auto;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+}
+
+/* Responsive Styles */
+@media (max-width: 640px) {
+  .admin-container {
+    padding: 16px;
+  }
+
+  .modal-content {
+    width: 95%;
+    padding: 16px;
+  }
+
+  .basket-input-group {
+    grid-template-columns: 1fr;
+  }
+
+  .admin-table {
+    min-width: 100%;
+  }
+
+  .modal-actions {
+    flex-direction: column-reverse;
+    gap: 8px;
+  }
+
+  .modal-actions button {
+    width: 100%;
+  }
+}
 
 
 .error-container {

@@ -4,24 +4,54 @@
 
     <!-- Actions Section -->
     <div class="actions-section">
-      <!-- Search Bar (Left-aligned) -->
       <div class="search-container">
         <input 
           type="text" 
           v-model="searchQuery" 
           placeholder="Search accounts..." 
           class="search-input"
-          @input="handleSearch"
         />
       </div>
-      <!-- Submit Button (Right-aligned) -->
       <div class="submit-container">
         <button 
-          @click="handleSubmit" 
+          @click="showTotpModal = true" 
           class="submit-button"
         >
           Submit
         </button>
+      </div>
+    </div>
+
+    <!-- TOTP Verification Modal -->
+    <div v-if="showTotpModal" class="modal-overlay">
+      <div class="modal-content">
+        <h2 class="modal-title">Enter Password</h2>
+        <div class="form-group">
+          <input 
+            type="password" 
+            v-model="totpCode"
+            placeholder="Enter password"
+            class="form-input"
+            :class="{ 'input-error': totpError }"
+            @input="totpError = ''"
+           
+          />
+          <span v-if="totpError" class="error-text">{{ totpError }}</span>
+        </div>
+        <div class="modal-actions">
+          <button 
+            @click="showTotpModal = false" 
+            class="cancel-button"
+          >
+            Cancel
+          </button>
+          <button 
+            @click="handleSubmitWithTotp" 
+            class="submit-button"
+          >
+            Submit
+          </button>
+        </div>
       </div>
     </div>
 
@@ -48,7 +78,7 @@
         <tbody>
           <tr v-for="(account, index) in filteredAccounts" :key="index">
             <td>{{index}}</td>
-            <td>{{ marginData['pf'][account.user_id] }} </td>
+            <td>{{ marginData['pf'][account.user_id] }}</td>
             <td>
               <button 
                 @click="openEditModal(account.user_id)"
@@ -78,6 +108,9 @@ const updateError = ref(null);
 const accounts = ref([]);
 const marginData = ref([]);
 const searchQuery = ref('');
+const showTotpModal = ref(false);
+const totpCode = ref('');
+const totpError = ref('');
 
 // Computed property for filtered accounts
 const filteredAccounts = computed(() => {
@@ -93,17 +126,10 @@ const filteredAccounts = computed(() => {
 });
 
 
-// Search handler with debounce
-let searchTimeout;
-const handleSearch = () => {
-  clearTimeout(searchTimeout);
-  searchTimeout = setTimeout(() => {
-    // Additional search logic if needed
-  }, 300);
-};
 
-// Submit handler
-const handleSubmit = async () => {
+
+// Submit handler with TOTP
+const handleSubmitWithTotp = async () => {
   try {
     const token = localStorage.getItem('access_token');
     if (!token) {
@@ -115,20 +141,31 @@ const handleSubmit = async () => {
       headers: {
         'Authorization': `Bearer ${token}`,
         'Content-Type': 'application/json'
-      }
+      },
+      body: JSON.stringify({
+        totp_code: totpCode.value
+      })
     });
 
     const data = await response.json();
 
     if (!response.ok) {
+      if (response.status === 401) {
+        totpError.value = 'Invalid Password. Please try again.';
+        return;
+      }
       throw new Error(data.detail || data.message || 'An error occurred');
     }
 
+    showTotpModal.value = false;
+    totpCode.value = '';
     alert("All Accounts Margins Updated Successfully!");
     return data;
 
   } catch (error) {
-    alert(`Error: ${error.message}`);
+    if (!totpError.value) {
+      alert(`Error: ${error.message}`);
+    }
     console.error('Error updating margin:', error.message);
     throw error;
   }
@@ -184,6 +221,34 @@ onMounted(async () => {
 </script>
 
 <style scoped>
+
+.form-input {
+  width: 100%;
+  padding: 12px;
+  border: 2px solid #e5e7eb;
+  border-radius: 8px;
+  font-size: 16px;
+  transition: all 0.2s ease;
+}
+
+.form-input:focus {
+  outline: none;
+  border-color: #3b82f6;
+  box-shadow: 0 4px 6px rgba(59, 130, 246, 0.1);
+}
+
+.form-input.input-error {
+  border-color: #ef4444;
+}
+
+.error-text {
+  color: #ef4444;
+  font-size: 14px;
+  margin-top: 4px;
+}
+
+
+
 .actions-section {
   display: flex;
   justify-content: space-between;
@@ -452,12 +517,6 @@ button:disabled {
 
 .input-error {
   border-color: #ef4444 !important;
-}
-
-.error-text {
-  color: #ef4444;
-  font-size: 12px;
-  margin-top: 2px;
 }
 
 /* Loading State */
