@@ -4,6 +4,7 @@
     
     <!-- Add TOTP Modal -->
     <!-- TOTP Verification Modal -->
+<!-- TOTP Verification Modal -->
     <div v-if="showTotpModal" class="modal-overlay">
       <div class="modal-content">
         <h2 class="modal-title">Enter Password</h2>
@@ -15,19 +16,18 @@
             class="form-input"
             :class="{ 'input-error': totpError }"
             @input="totpError = ''"
-           
           />
           <span v-if="totpError" class="error-text">{{ totpError }}</span>
         </div>
         <div class="modal-actions">
           <button 
-            @click="showTotpModal = false" 
+            @click="cancelTotpModal" 
             class="cancel-button2"
           >
             Cancel
           </button>
           <button 
-            @click="updatePortfolioValue" 
+            @click="handleTotpSubmit" 
             class="submit-button"
           >
             Submit
@@ -49,7 +49,7 @@
             :class="{ 'error-input': portfolioError }"
           />
           <button 
-            @click="showTotpModal = true" 
+            @click="showTotpModalWithAction('portfolio')" 
             class="update-button"
             :disabled="portfolioError || isUpdatingPortfolio"
           >
@@ -69,48 +69,7 @@
       <p>Loading data...</p>
     </div>
 
-    <!-- Client Multiplier Table -->
-    <div v-if="!loading && !error" class="content-wrapper">
-      <h2 class="text-xl font-semibold mb-4 text-gray-700">Client Multiplier Settings</h2>
-      <div class="table-container">
-        <table class="data-table">
-          <thead>
-            <tr>
-              <th>Strategy</th>
-              <th>Multiplier Value</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr v-for="(value, key) in client_multiplier" :key="key">
-              <td class="strategy-cell">{{ key }}</td>
-              <td>
-                <input 
-                  type="number" 
-                  v-model="client_multiplier[key]" 
-                  class="editable-input"
-                  @input="validateMultiplier(key)"
-                  :class="{ 'error-input': multiplierErrors[key] }"
-                />
-                <span v-if="multiplierErrors[key]" class="error-text text-sm text-red-500 mt-1">
-                  {{ multiplierErrors[key] }}
-                </span>
-              </td>
-            </tr>
-          </tbody>
-        </table>
-      </div>
-      
-      <div class="action-buttons">
-        <button 
-          @click="updateMultiplier" 
-          class="save-button"
-          :disabled="hasMultiplierErrors || isUpdatingMultiplier"
-        >
-          <span class="button-icon">{{ isUpdatingMultiplier ? '⌛' : '💾' }}</span>
-          {{ isUpdatingMultiplier ? 'Updating...' : 'Update Multiplier' }}
-        </button>
-      </div>
-    </div>
+
 
     <!-- Main Data Table -->
     <div v-if="filteredData && !loading && !error" class="content-wrapper">
@@ -194,9 +153,9 @@
 
       <div class="action-buttons">
         <button 
-          @click="showTotpModal = true" 
-          class="save-button"
-          :disabled="hasErrors || isSaving"
+            @click="showTotpModalWithAction('portfolio')" 
+            class="save-button"
+            :disabled="hasErrors || isSaving"
         >
           <span class="button-icon">{{ isSaving ? '⌛' : '💾' }}</span>
           {{ isSaving ? 'Saving...' : 'Save Changes' }}
@@ -204,6 +163,48 @@
         <button @click="confirmCancel" class="cancel-button">
           <span class="button-icon">✖</span>
           Cancel
+        </button>
+      </div>
+    </div>
+        <!-- Client Multiplier Table -->
+        <div v-if="!loading && !error" class="content-wrapper">
+      <h2 class="text-xl font-semibold mb-4 text-gray-700">Client Multiplier Settings</h2>
+      <div class="table-container">
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>Strategy</th>
+              <th>Multiplier Value</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr v-for="(value, key) in client_multiplier" :key="key">
+              <td class="strategy-cell">{{ key }}</td>
+              <td>
+                <input 
+                  type="number" 
+                  v-model="client_multiplier[key]" 
+                  class="editable-input"
+                  @input="validateMultiplier(key)"
+                  :class="{ 'error-input': multiplierErrors[key] }"
+                />
+                <span v-if="multiplierErrors[key]" class="error-text text-sm text-red-500 mt-1">
+                  {{ multiplierErrors[key] }}
+                </span>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+      
+      <div class="action-buttons">
+        <button 
+          @click="showTotpModalWithAction('multiplier')" 
+          class="save-button"
+          :disabled="hasMultiplierErrors || isUpdatingMultiplier"
+        >
+          <span class="button-icon">{{ isUpdatingMultiplier ? '⌛' : '💾' }}</span>
+          {{ isUpdatingMultiplier ? 'Updating...' : 'Update Multiplier' }}
         </button>
       </div>
     </div>
@@ -231,6 +232,7 @@ const isUpdatingPortfolio = ref(false);
 const hasUnsavedChanges = ref(false);
 const live_clients = ref({});
 const client_multiplier = ref({});
+const modalAction = ref(''); 
 
 // Client multiplier state
 const multiplierErrors = ref({});
@@ -240,6 +242,31 @@ const isUpdatingMultiplier = ref(false);
 const showTotpModal = ref(false);
 const totpCode = ref('');
 const totpError = ref('');
+
+const showTotpModalWithAction = (action) => {
+  modalAction.value = action;
+  showTotpModal.value = true;
+  totpCode.value = '';
+  totpError.value = '';
+};
+
+const cancelTotpModal = () => {
+  showTotpModal.value = false;
+  modalAction.value = '';
+  totpCode.value = '';
+  totpError.value = '';
+};
+
+const handleTotpSubmit = async () => {
+  switch (modalAction.value) {
+    case 'portfolio':
+      await updatePortfolioValue();
+      break;
+    case 'multiplier':
+      await updateMultiplier();
+      break;
+  }
+};
 
 
 // Computed properties
