@@ -118,20 +118,19 @@ const handleSubmit = async () => {
       }
     });
 
+    const data = await response.json();
+
     if (!response.ok) {
-      const errorMessage = await response.text();
-      throw new Error(`Error updating margin for all accounts: ${errorMessage}`);
+      throw new Error(data.detail || data.message || 'An error occurred');
     }
 
-    alert("All Accounts Margins Updated Successfully!")
-    // Return or handle successful response
-    return await response.json();
-
+    alert("All Accounts Margins Updated Successfully!");
+    return data;
 
   } catch (error) {
-    // Remove reference to undefined 'error.value'
+    alert(`Error: ${error.message}`);
     console.error('Error updating margin:', error.message);
-    throw error; // Re-throw the error to be handled by the caller
+    throw error;
   }
 };
 

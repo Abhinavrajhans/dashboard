@@ -260,13 +260,14 @@ const updatePortfolioValue = async () => {
       body: JSON.stringify({ 
         account: account.value, 
         portfolioValue: Number(portfolioValue.value),
-        params:filteredData.value
+        params: filteredData.value
       }),
     });
 
+    const data = await response.json();
+    
     if (!response.ok) {
-      const errorMessage = await response.text();
-      throw new Error(errorMessage);
+      throw new Error(data.detail || data.message || 'An error occurred');
     }
 
     alert("Portfolio value updated successfully!");
