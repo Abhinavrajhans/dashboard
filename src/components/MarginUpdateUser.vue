@@ -57,7 +57,9 @@
             <i v-else class="ph-bold ph-spinner animate-spin"></i>
           </button>
         </div>
-        <span v-if="portfolioError" class="error-text text-sm text-red-500 mt-1">{{ portfolioError }}</span>
+        <span v-if="portfolioError" class="error-text text-sm text-red-500 mt-1">
+          {{ portfolioError }}
+        </span>
       </div>
     </div>
 
@@ -67,7 +69,50 @@
       <p>Loading data...</p>
     </div>
 
+    <!-- Client Multiplier Table -->
+    <div v-if="!loading && !error" class="content-wrapper">
+      <h2 class="text-xl font-semibold mb-4 text-gray-700">Client Multiplier Settings</h2>
+      <div class="table-container">
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>Strategy</th>
+              <th>Multiplier Value</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr v-for="(value, key) in client_multiplier" :key="key">
+              <td class="strategy-cell">{{ key }}</td>
+              <td>
+                <input 
+                  type="number" 
+                  v-model="client_multiplier[key]" 
+                  class="editable-input"
+                  @input="validateMultiplier(key)"
+                  :class="{ 'error-input': multiplierErrors[key] }"
+                />
+                <span v-if="multiplierErrors[key]" class="error-text text-sm text-red-500 mt-1">
+                  {{ multiplierErrors[key] }}
+                </span>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+      
+      <div class="action-buttons">
+        <button 
+          @click="updateMultiplier" 
+          class="save-button"
+          :disabled="hasMultiplierErrors || isUpdatingMultiplier"
+        >
+          <span class="button-icon">{{ isUpdatingMultiplier ? '⌛' : '💾' }}</span>
+          {{ isUpdatingMultiplier ? 'Updating...' : 'Update Multiplier' }}
+        </button>
+      </div>
+    </div>
 
+    <!-- Main Data Table -->
     <div v-if="filteredData && !loading && !error" class="content-wrapper">
       <!-- Existing content structure -->
       <div class="stats-selector">
@@ -102,7 +147,9 @@
                   @input="validateField(row, 'qtylimit')"
                   :class="{ 'error-input': row.errors?.qtylimit }"
                 />
-                <span v-if="row.errors?.qtylimit" class="error-text text-sm text-red-500 mt-1">{{ row.errors.qtylimit }}</span>
+                <span v-if="row.errors?.qtylimit" class="error-text text-sm text-red-500 mt-1">
+                  {{ row.errors.qtylimit }}
+                </span>
               </td>
               <td>
                 <input 
@@ -112,7 +159,9 @@
                   @input="validateField(row, 'cvlimit')"
                   :class="{ 'error-input': row.errors?.cvlimit }"
                 />
-                <span v-if="row.errors?.cvlimit" class="error-text text-sm text-red-500 mt-1">{{ row.errors.cvlimit }}</span>
+                <span v-if="row.errors?.cvlimit" class="error-text text-sm text-red-500 mt-1">
+                  {{ row.errors.cvlimit }}
+                </span>
               </td>
               <td>
                 <input 
@@ -122,7 +171,9 @@
                   @input="validateField(row, 'factor1')"
                   :class="{ 'error-input': row.errors?.factor1 }"
                 />
-                <span v-if="row.errors?.factor1" class="error-text text-sm text-red-500 mt-1">{{ row.errors.factor1 }}</span>
+                <span v-if="row.errors?.factor1" class="error-text text-sm text-red-500 mt-1">
+                  {{ row.errors.factor1 }}
+                </span>
               </td>
               <td>
                 <input 
@@ -132,7 +183,9 @@
                   @input="validateField(row, 'factor2')"
                   :class="{ 'error-input': row.errors?.factor2 }"
                 />
-                <span v-if="row.errors?.factor2" class="error-text text-sm text-red-500 mt-1">{{ row.errors.factor2 }}</span>
+                <span v-if="row.errors?.factor2" class="error-text text-sm text-red-500 mt-1">
+                  {{ row.errors.factor2 }}
+                </span>
               </td>
             </tr>
           </tbody>
@@ -176,14 +229,24 @@ const portfolioError = ref('');
 const isSaving = ref(false);
 const isUpdatingPortfolio = ref(false);
 const hasUnsavedChanges = ref(false);
+const live_clients = ref({});
+const client_multiplier = ref({});
 
+// Client multiplier state
+const multiplierErrors = ref({});
+const isUpdatingMultiplier = ref(false);
 
+// TOTP Modal state
 const showTotpModal = ref(false);
 const totpCode = ref('');
 const totpError = ref('');
 
 
 // Computed properties
+const hasMultiplierErrors = computed(() => {
+  return Object.keys(multiplierErrors.value).length > 0;
+});
+
 const hasErrors = computed(() => {
   if (!filteredData.value) return false;
   return filteredData.value.some(row => row.errors && Object.keys(row.errors).length > 0);
@@ -231,7 +294,15 @@ const fetchMarginData = async () => {
   try {
     await fetchData("MarginData", data);
     filteredData.value = data.value["params"][account.value];
-    portfolioValue.value=data.value["pf"][account.value];
+    portfolioValue.value = data.value["pf"][account.value];
+    live_clients.value = data.value["live clients"];
+    
+    // Find the key
+    const matchingKey = Object.keys(live_clients.value).find(
+      key => live_clients.value[key].user_id === account.value
+    );
+    client_multiplier.value = live_clients.value[matchingKey].client_multiplier;
+    
     hasUnsavedChanges.value = false;
   } catch (err) {
     throw err;
@@ -281,8 +352,24 @@ const validateField = (row, field) => {
   hasUnsavedChanges.value = true;
 };
 
+const validateMultiplier = (key) => {
+  const value = Number(client_multiplier.value[key]);
+  
+  if (isNaN(value)) {
+    multiplierErrors.value[key] = 'Please enter a valid number';
+    return false;
+  }
+  
+  if (value < 0) {
+    multiplierErrors.value[key] = 'Value cannot be negative';
+    return false;
+  }
+  
+  delete multiplierErrors.value[key];
+  return true;
+};
 
-// Enhanced portfolio value update
+// Update functions
 const updatePortfolioValue = async () => {
   if (!validatePortfolioValue()) return;
   
@@ -312,12 +399,59 @@ const updatePortfolioValue = async () => {
     }
 
     alert("Portfolio value updated successfully!");
-    cancelChanges();
+    showTotpModal.value = false;
+    totpCode.value = '';
+
   } catch (err) {
     alert(`Error updating portfolio value: ${err.message}`);
+    totpError.value = err.message;
     console.error("Error updating portfolio value:", err.message);
   } finally {
     isUpdatingPortfolio.value = false;
+  }
+};
+
+const updateMultiplier = async () => {
+  const hasErrors = Object.keys(client_multiplier.value).some(key => !validateMultiplier(key));
+  if (hasErrors) return;
+  
+  isUpdatingMultiplier.value = true;
+  try {
+    const token = localStorage.getItem("access_token");
+    if (!token) throw new Error("Authentication required");
+
+    const response = await fetch(`https://api.swancapital.in/UpdateClientMultiplier`, {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${token}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ 
+        account: account.value,
+        client_multiplier: client_multiplier.value,
+        totp_code: totpCode.value
+      }),
+    });
+
+    if (!response.ok) {
+      const data = await response.json();
+      throw new Error(data.detail || data.message || 'An error occurred');
+    }
+
+    // Close modal and clear TOTP code
+    showTotpModal.value = false;
+    totpCode.value = '';
+
+    alert("Client multiplier updated successfully!");
+    hasUnsavedChanges.value = false;
+
+    // Optionally refresh data
+    await fetchMarginData();
+  } catch (err) {
+    alert(`Error updating client multiplier: ${err.message}`);
+    console.error("Error updating client multiplier:", err.message);
+  } finally {
+    isUpdatingMultiplier.value = false;
   }
 };
 
@@ -403,8 +537,6 @@ onMounted(() => {
   font-weight: 500;
   transition: all 0.2s;
   cursor: pointer;
-}
-.cancel-button2 {
   background-color: #6b7280;
   color: white;
   border: none;
@@ -507,29 +639,6 @@ onMounted(() => {
 
 .modal-content {
   transition: transform 0.2s ease;
-}
-
-.modal-title {
-  font-size: 20px;
-  font-weight: 600;
-  color: #1f2937;
-  margin-bottom: 20px;
-  text-align: center;
-}
-
-/* Accessibility */
-@media (prefers-reduced-motion: reduce) {
-  .loader {
-    animation: none;
-  }
-  
-  .modal-overlay,
-  .modal-content {
-    transition: none;
-  }
-}
-
-.modal-content {
   background-color: white;
   padding: 24px;
   border-radius: 8px;
@@ -540,10 +649,231 @@ onMounted(() => {
   box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
 }
 
-/* Responsive Styles */
-@media (max-width: 640px) {
-  .admin-container {
-    padding: 16px;
+.modal-title {
+  font-size: 20px;
+  font-weight: 600;
+  color: #1f2937;
+  margin-bottom: 20px;
+  text-align: center;
+}
+
+.data-fetch-container {
+  min-height: 100vh;
+  padding: 1.75rem;
+  font-family: 'Inter', system-ui, -apple-system, sans-serif;
+  background: #f8fafc;
+}
+
+.header {
+  position: relative;
+  background: rgba(255, 255, 255, 0.98);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.08);
+  border: 1px solid rgba(229, 231, 235, 0.5);
+  border-radius: 14px;
+  padding: 1.75rem;
+  text-align: center;
+  transition: all 0.15s ease;
+}
+
+.account-heading {
+  font-size: 1.5rem;
+  color: #475569;
+  font-weight: 600;
+  margin-bottom: 1.25rem;
+}
+
+.portfolio-section {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.portfolio-label {
+  font-size: 0.875rem;
+  color: #64748b;
+  font-weight: 500;
+}
+
+.portfolio-input-group {
+  display: flex;
+  align-items: center;
+  background: white;
+  border: 1px solid rgba(229, 231, 235, 0.5);
+  border-radius: 10px;
+  padding: 0.5rem;
+  transition: all 0.15s ease;
+  gap: 0.5rem;
+}
+
+.portfolio-input-group:focus-within {
+  border-color: #2563eb;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+}
+
+.currency-symbol {
+  font-size: 1rem;
+  color: #64748b;
+  padding: 0 0.5rem;
+}
+
+.portfolio-input {
+  width: 150px;
+  border: none;
+  outline: none;
+  font-size: 1rem;
+  color: #1e293b;
+  font-weight: 500;
+  padding: 0.375rem;
+  background: transparent;
+}
+
+.update-button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.375rem;
+  background: #f1f5f9;
+  border: none;
+  border-radius: 8px;
+  color: #64748b;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.update-button:hover {
+  background: #e2e8f0;
+  color: #2563eb;
+}
+
+.content-wrapper {
+  background: rgba(255, 255, 255, 0.98);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.08);
+  border: 1px solid rgba(229, 231, 235, 0.5);
+  border-radius: 14px;
+  padding: 1.75rem;
+  margin-top: 1.75rem;
+}
+
+/* Table styles matching sidebar theme */
+.table-container {
+  border: 1px solid rgba(229, 231, 235, 0.5);
+  border-radius: 10px;
+  overflow: hidden;
+}
+
+.data-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.data-table th {
+  background: #f8fafc;
+  padding: 1rem;
+  text-align: left;
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: #475569;
+  border-bottom: 1px solid rgba(229, 231, 235, 0.5);
+}
+
+.data-table td {
+  padding: 1rem;
+  border-bottom: 1px solid rgba(229, 231, 235, 0.5);
+}
+
+.editable-input {
+  width: 100%;
+  padding: 0.5rem;
+  border: 1px solid rgba(229, 231, 235, 0.5);
+  border-radius: 8px;
+  font-size: 0.875rem;
+  color: #475569;
+  transition: all 0.15s ease;
+}
+
+.editable-input:focus {
+  border-color: #2563eb;
+  box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.1);
+}
+
+/* Action buttons matching sidebar theme */
+.action-buttons {
+  display: flex;
+  justify-content: center;
+  gap: 1rem;
+  margin-top: 1.75rem;
+  padding-top: 1.75rem;
+  border-top: 1px solid rgba(229, 231, 235, 0.5);
+}
+
+.save-button,
+.cancel-button {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.75rem 1.25rem;
+  font-size: 0.875rem;
+  font-weight: 500;
+  border: 1px solid rgba(229, 231, 235, 0.5);
+  border-radius: 10px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.save-button {
+  background: #2563eb;
+  color: white;
+}
+
+.save-button:hover {
+  background: #1d4ed8;
+}
+
+.cancel-button {
+  background: #ef4444;
+  color: white;
+}
+
+.cancel-button:hover {
+  background: #dc2626;
+}
+
+/* Stats dropdown matching sidebar theme */
+.stat-dropdown {
+  padding: 0.75rem 1.25rem;
+  border: 1px solid rgba(229, 231, 235, 0.5);
+  border-radius: 10px;
+  background: white;
+  color: #475569;
+  font-size: 0.875rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.stat-dropdown:hover {
+  border-color: #2563eb;
+}
+
+.stat-label {
+  color: #64748b;
+  font-size: 0.875rem;
+  font-weight: 500;
+}
+
+@media (max-width: 768px) {
+  .data-fetch-container {
+    padding: 1rem;
+  }
+
+  .action-buttons {
+    flex-direction: column;
+  }
+
+  .portfolio-input-group {
+    width: 100%;
+    max-width: 300px;
   }
 
   .modal-content {
@@ -551,304 +881,81 @@ onMounted(() => {
     padding: 16px;
   }
 
-  .basket-input-group {
-    grid-template-columns: 1fr;
+  .data-table {
+    display: block;
+    overflow-x: auto;
+    white-space: nowrap;
   }
 
-  .admin-table {
-    min-width: 100%;
-  }
-
-  .modal-actions {
-    flex-direction: column-reverse;
-    gap: 8px;
-  }
-
-  .modal-actions button {
-    width: 100%;
+  .editable-input {
+    min-width: 100px;
   }
 }
 
+.loading-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 200px;
+  gap: 1rem;
+}
 
-.error-container {
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    min-height: 200px;
-    padding: 2rem;
-    margin: 2rem auto;
-    max-width: 400px;
+.loading-spinner {
+  width: 40px;
+  height: 40px;
+  border: 3px solid #f3f4f6;
+  border-top: 3px solid #3b82f6;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+/* Error States */
+.error-input {
+  border-color: #ef4444 !important;
+}
+
+/* Accessibility */
+@media (prefers-reduced-motion: reduce) {
+  .loading-spinner,
+  .modal-overlay,
+  .modal-content {
+    animation: none;
+    transition: none;
+  }
+}
+
+/* Print Styles */
+@media print {
+  .data-fetch-container {
     background: white;
-    border-radius: 12px;
-    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
-}
+    padding: 0;
+  }
 
-.error-content {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    text-align: center;
-    gap: 1rem;
-}
+  .action-buttons,
+  .update-button,
+  .portfolio-input-group button {
+    display: none;
+  }
 
-.error-icon {
-    width: 32px;
-    height: 32px;
-    stroke: #ef4444;
-    margin-bottom: 0.5rem;
-}
-
-.error-message {
-    color: #1f2937;
-    font-size: 0.875rem;
-    line-height: 1.5;
-    margin: 0;
-}
-
-.retry-button {
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-    padding: 0.5rem 1rem;
-    font-size: 0.875rem;
-    font-weight: 500;
-    color: white;
-    background-color: #3b82f6;
+  .content-wrapper {
+    box-shadow: none;
     border: none;
-    border-radius: 6px;
-    cursor: pointer;
-    transition: all 0.15s ease;
-}
+    padding: 0;
+  }
 
-.retry-button:hover {
-    background-color: #2563eb;
-}
-
-.retry-icon {
-    width: 16px;
-    height: 16px;
-    stroke: currentColor;
-}
-
-
-
-.data-fetch-container {
-    min-height: 100vh;
-    padding: 1.75rem;
-    font-family: 'Inter', system-ui, -apple-system, sans-serif;
-    background: #f8fafc;
-}
-
-.header {
-    position: relative;
-    background: rgba(255, 255, 255, 0.98);
-    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.08);
-    border: 1px solid rgba(229, 231, 235, 0.5);
-    border-radius: 14px;
-    padding: 1.75rem;
-    text-align: center;
-    transition: all 0.15s ease;
-}
-
-.account-heading {
-    font-size: 1.5rem;
-    color: #475569;
-    font-weight: 600;
-    margin-bottom: 1.25rem;
-}
-
-.portfolio-section {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 0.5rem;
-}
-
-.portfolio-label {
-    font-size: 0.875rem;
-    color: #64748b;
-    font-weight: 500;
-}
-
-.portfolio-input-group {
-    display: flex;
-    align-items: center;
-    background: white;
-    border: 1px solid rgba(229, 231, 235, 0.5);
-    border-radius: 10px;
-    padding: 0.5rem;
-    transition: all 0.15s ease;
-    gap: 0.5rem;
-}
-
-.portfolio-input-group:focus-within {
-    border-color: #2563eb;
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
-}
-
-.currency-symbol {
-    font-size: 1rem;
-    color: #64748b;
-    padding: 0 0.5rem;
-}
-
-.portfolio-input {
-    width: 150px;
+  .table-container {
     border: none;
-    outline: none;
-    font-size: 1rem;
-    color: #1e293b;
-    font-weight: 500;
-    padding: 0.375rem;
-    background: transparent;
-}
+  }
 
-.update-button {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    padding: 0.375rem;
-    background: #f1f5f9;
-    border: none;
-    border-radius: 8px;
-    color: #64748b;
-    cursor: pointer;
-    transition: all 0.15s ease;
-}
-
-.update-button:hover {
-    background: #e2e8f0;
-    color: #2563eb;
-}
-
-.content-wrapper {
-    background: rgba(255, 255, 255, 0.98);
-    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.08);
-    border: 1px solid rgba(229, 231, 235, 0.5);
-    border-radius: 14px;
-    padding: 1.75rem;
-    margin-top: 1.75rem;
-}
-
-/* Table styles matching sidebar theme */
-.table-container {
-    border: 1px solid rgba(229, 231, 235, 0.5);
-    border-radius: 10px;
-    overflow: hidden;
-}
-
-.data-table {
-    width: 100%;
-    border-collapse: collapse;
-}
-
-.data-table th {
-    background: #f8fafc;
-    padding: 1rem;
-    text-align: left;
-    font-size: 0.875rem;
-    font-weight: 600;
-    color: #475569;
-    border-bottom: 1px solid rgba(229, 231, 235, 0.5);
-}
-
-.data-table td {
-    padding: 1rem;
-    border-bottom: 1px solid rgba(229, 231, 235, 0.5);
-}
-
-.editable-input {
-    width: 100%;
-    padding: 0.5rem;
-    border: 1px solid rgba(229, 231, 235, 0.5);
-    border-radius: 8px;
-    font-size: 0.875rem;
-    color: #475569;
-    transition: all 0.15s ease;
-}
-
-.editable-input:focus {
-    border-color: #2563eb;
-    box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.1);
-}
-
-/* Action buttons matching sidebar theme */
-.action-buttons {
-    display: flex;
-    justify-content: center;
-    gap: 1rem;
-    margin-top: 1.75rem;
-    padding-top: 1.75rem;
-    border-top: 1px solid rgba(229, 231, 235, 0.5);
-}
-
-.save-button,
-.cancel-button {
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-    padding: 0.75rem 1.25rem;
-    font-size: 0.875rem;
-    font-weight: 500;
-    border: 1px solid rgba(229, 231, 235, 0.5);
-    border-radius: 10px;
-    cursor: pointer;
-    transition: all 0.15s ease;
-}
-
-.save-button {
-    background: #2563eb;
-    color: white;
-}
-
-.save-button:hover {
-    background: #1d4ed8;
-}
-
-.cancel-button {
-    background: #ef4444;
-    color: white;
-}
-
-.cancel-button:hover {
-    background: #dc2626;
-}
-
-/* Stats dropdown matching sidebar theme */
-.stat-dropdown {
-    padding: 0.75rem 1.25rem;
-    border: 1px solid rgba(229, 231, 235, 0.5);
-    border-radius: 10px;
-    background: white;
-    color: #475569;
-    font-size: 0.875rem;
-    font-weight: 500;
-    cursor: pointer;
-    transition: all 0.15s ease;
-}
-
-.stat-dropdown:hover {
-    border-color: #2563eb;
-}
-
-.stat-label {
-    color: #64748b;
-    font-size: 0.875rem;
-    font-weight: 500;
-}
-
-@media (max-width: 768px) {
-    .data-fetch-container {
-        padding: 1rem;
-    }
-
-    .action-buttons {
-        flex-direction: column;
-    }
-
-    .portfolio-input-group {
-        width: 100%;
-        max-width: 300px;
-    }
+  .data-table th,
+  .data-table td {
+    border: 1px solid #e5e7eb;
+  }
 }
 </style>
