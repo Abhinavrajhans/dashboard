@@ -269,10 +269,6 @@ const handleTotpSubmit = async () => {
 };
 
 
-// Computed properties
-const hasMultiplierErrors = computed(() => {
-  return Object.keys(multiplierErrors.value).length > 0;
-});
 
 const hasErrors = computed(() => {
   if (!filteredData.value) return false;
@@ -379,22 +375,6 @@ const validateField = (row, field) => {
   hasUnsavedChanges.value = true;
 };
 
-const validateMultiplier = (key) => {
-  const value = Number(client_multiplier.value[key]);
-  
-  if (isNaN(value)) {
-    multiplierErrors.value[key] = 'Please enter a valid number';
-    return false;
-  }
-  
-  if (value < 0) {
-    multiplierErrors.value[key] = 'Value cannot be negative';
-    return false;
-  }
-  
-  delete multiplierErrors.value[key];
-  return true;
-};
 
 // Update functions
 const updatePortfolioValue = async () => {
