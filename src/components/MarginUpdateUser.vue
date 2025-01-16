@@ -169,6 +169,19 @@
         <!-- Client Multiplier Table -->
         <div v-if="!loading && !error" class="content-wrapper">
       <h2 class="text-xl font-semibold mb-4 text-gray-700">Client Multiplier Settings</h2>
+        <!-- New Multi-Select Component -->
+        <div class="select-container">
+        <a-select
+          v-model:value="selectedFeatures"
+          mode="multiple"
+          placeholder="Select Features"
+          style="width: 100%"
+          :options="featuresOptionsWithAll"
+          :maxTagCount="3"
+          @change="handleFeatureChange"
+          :disabled="isUpdatingMultiplier"
+        ></a-select>
+  </div>
       <div class="table-container">
         <table class="data-table">
           <thead>
@@ -201,7 +214,7 @@
         <button 
           @click="showTotpModalWithAction('multiplier')" 
           class="save-button"
-          :disabled="hasMultiplierErrors || isUpdatingMultiplier"
+          :disabled="isUpdatingMultiplier"
         >
           <span class="button-icon">{{ isUpdatingMultiplier ? '⌛' : '💾' }}</span>
           {{ isUpdatingMultiplier ? 'Updating...' : 'Update Multiplier' }}
@@ -242,6 +255,64 @@ const isUpdatingMultiplier = ref(false);
 const showTotpModal = ref(false);
 const totpCode = ref('');
 const totpError = ref('');
+
+// New state for features selection
+const selectedFeatures = ref([]);
+const isAllSelected = ref(false);
+
+// Modified computed property with null checks
+const featuresOptionsWithAll = computed(() => {
+  if (!data.value || !data.value.baskets) {
+    return [];
+  }
+  
+  return [
+    { 
+      label: isAllSelected.value ? 'Remove All' : 'All', 
+      value: 'all' 
+    },
+    ...data.value.baskets.map(feature => ({
+      label: feature,
+      value: feature
+    }))
+  ];
+});
+
+// Modified handler with null checks
+const handleFeatureChange = (value) => {
+  if (!data.value || !data.value.baskets) return;
+  if (value.includes('all')) {
+    if (isAllSelected.value) {
+      // Deselect all features
+      selectedFeatures.value = [];
+      isAllSelected.value = false;
+      client_multiplier.value = {};  // Clear the client_multiplier
+    } else {
+      // Select all features
+      selectedFeatures.value = data.value.baskets;
+      isAllSelected.value = true;
+      
+      // Update client_multiplier with existing values or 0
+      const updatedMultiplier = {};
+      data.value.baskets.forEach(basket => {
+        updatedMultiplier[basket] = client_multiplier.value[basket] || 0;
+      });
+      client_multiplier.value = updatedMultiplier;
+    }
+  } else {
+    // Normal selection handling
+    selectedFeatures.value = value.filter(feature => feature !== 'all');
+    isAllSelected.value = selectedFeatures.value.length === data.value.baskets.length;
+
+    // Update client_multiplier to only include selected features
+    const updatedMultiplier = {};
+    selectedFeatures.value.forEach(feature => {
+      updatedMultiplier[feature] = client_multiplier.value[feature] || 0;
+    });
+    client_multiplier.value = updatedMultiplier;
+  }
+  hasUnsavedChanges.value = true;
+};
 
 const showTotpModalWithAction = (action) => {
   modalAction.value = action;
@@ -316,6 +387,8 @@ const fetchMarginData = async () => {
   
   try {
     await fetchData("MarginData", data);
+    if (!data.value) throw new Error("Failed to fetch margin data");
+    
     filteredData.value = data.value["params"][account.value];
     portfolioValue.value = data.value["pf"][account.value];
     live_clients.value = data.value["live clients"];
@@ -324,11 +397,20 @@ const fetchMarginData = async () => {
     const matchingKey = Object.keys(live_clients.value).find(
       key => live_clients.value[key].user_id === account.value
     );
-    client_multiplier.value = live_clients.value[matchingKey].client_multiplier;
+    
+    // Initialize client_multiplier
+    client_multiplier.value = live_clients.value[matchingKey]?.client_multiplier || {};
+    
+    // Initialize selected features based on existing client_multiplier
+    if (data.value.baskets) {
+      selectedFeatures.value = Object.keys(client_multiplier.value);
+      isAllSelected.value = selectedFeatures.value.length === data.value.baskets.length;
+    }
     
     hasUnsavedChanges.value = false;
   } catch (err) {
-    throw err;
+    error.value = err.message;
+    console.error("Error fetching margin data:", err);
   } finally {
     loading.value = false;
   }
@@ -507,6 +589,35 @@ onMounted(() => {
 });
 </script>
 <style scoped>
+
+/* Select Container Styles */
+.select-container {
+  margin-bottom: 1.5rem;
+  background: white;
+  padding: 1rem;
+  border-radius: 8px;
+  border: 1px solid rgba(229, 231, 235, 0.5);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+}
+
+.select-container :deep(.ant-select) {
+  width: 100%;
+}
+
+.select-container :deep(.ant-select-selector) {
+  border-radius: 6px !important;
+  border: 1px solid #d1d5db !important;
+  min-height: 38px !important;
+}
+
+.select-container :deep(.ant-select-selector:hover) {
+  border-color: #3b82f6 !important;
+}
+
+.select-container :deep(.ant-select-focused .ant-select-selector) {
+  border-color: #3b82f6 !important;
+  box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.1) !important;
+}
 
 
 .submit-button {
@@ -886,6 +997,9 @@ onMounted(() => {
   .modal-content {
     width: 95%;
     padding: 16px;
+  }
+  .select-container {
+    padding: 0.75rem;
   }
 
   .data-table {
