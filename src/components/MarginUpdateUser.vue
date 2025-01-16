@@ -433,6 +433,22 @@ const validatePortfolioValue = () => {
   hasUnsavedChanges.value = true;
   return true;
 };
+const validateMultiplier = (key) => {
+  const value = Number(client_multiplier.value[key]);
+  
+  multiplierErrors.value[key] = '';
+  
+  if (isNaN(value) || value === '' ) {
+    multiplierErrors.value[key] = 'Please enter a valid number';
+    return false;
+  }
+  if (value < 0) {
+    multiplierErrors.value[key] = 'Multiplier cannot be negative';
+    return false;
+  }
+  hasUnsavedChanges.value = true;
+  return true;
+}
 
 const validateField = (row, field) => {
   if (!row.errors) row.errors = {};
@@ -501,8 +517,8 @@ const updatePortfolioValue = async () => {
 };
 
 const updateMultiplier = async () => {
-  const hasErrors = Object.keys(client_multiplier.value).some(key => !validateMultiplier(key));
-  if (hasErrors) return;
+  const ErrorMultiplier = Object.keys(client_multiplier.value).some(key => !validateMultiplier(key));
+  if (ErrorMultiplier) return;
   
   isUpdatingMultiplier.value = true;
   try {
