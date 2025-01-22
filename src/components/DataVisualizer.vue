@@ -9,16 +9,13 @@ const WS7L = ref([]);
 const WS8L = ref([]);
 const signal_delay = ref([]);
 const ivchart = ref([]);
-const ltpchart = ref([]);
 
 // Add new refs for dates and index selection
 const selectedIndex = ref('NIFTY');
 const selectedIVDate = ref(new Date());
-const selectedLTPDate = ref(new Date());
 
 // Add loading states
 const isIVChartLoading = ref(false);
-const isLTPChartLoading = ref(false);
 
 const fetchClientDetails = async () => {
     try {
@@ -71,20 +68,11 @@ const fetchIVUNDERLYINGCHART = () => {
     }, ivchart, isIVChartLoading);
 };
 
-const fetchLTPUNDERLYINGCHART = () => {
-    const date = new Date(selectedLTPDate.value);
-    postData('ltpchart', {
-        index: selectedIndex.value,
-        year: date.getFullYear(),
-        month: date.getMonth() + 1,
-        day: date.getDate()
-    }, ltpchart, isLTPChartLoading);
-};
 
 onMounted(() => {
     fetchClientDetails();
     fetchIVUNDERLYINGCHART();
-    fetchLTPUNDERLYINGCHART();
+   
 });
 
 // Watch for changes in dates or index selection
@@ -92,9 +80,7 @@ watch([selectedIVDate, selectedIndex], () => {
     fetchIVUNDERLYINGCHART();
 });
 
-watch([selectedLTPDate, selectedIndex], () => {
-    fetchLTPUNDERLYINGCHART();
-});
+
 </script>
 
 <template>
@@ -151,18 +137,10 @@ watch([selectedLTPDate, selectedIndex], () => {
         <div class="chartContainer">
             <div class="chart-header">
                 <p class="heading">LTP and Underlying Price Chart</p>
-                <div class="chart-controls">
-                    <input 
-                        type="date"
-                        v-model="selectedLTPDate"
-                        class="date-select"
-                        :disabled="isLTPChartLoading"
-                    />
-                    <div v-if="isLTPChartLoading" class="loader"></div>
-                </div>
+
             </div>
             <IVChart 
-                :data="ltpchart" 
+                :data="ivchart" 
                 :series="[
                     {
                         field: 'ltpsum',
