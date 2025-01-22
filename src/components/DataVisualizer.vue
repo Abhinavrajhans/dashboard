@@ -9,6 +9,7 @@ const WS7L = ref([]);
 const WS8L = ref([]);
 const signal_delay = ref([]);
 const ivchart = ref([]);  // Changed to array to match component expectations
+const ltpchart= ref([]);
 
 const fetchClientDetails = async () => {
     try {
@@ -24,12 +25,11 @@ const fetchClientDetails = async () => {
         console.error('Error fetching client details:', error);
     }
 };
-
 const postData = async (endpoint, payload, stateRef) => {
     try {
         const token = localStorage.getItem('access_token');
         if (!token) throw new Error('User not authenticated');
-        const response = await fetch(`https://api.swancapital.in/ivchart`, {
+        const response = await fetch(`https://api.swancapital.in/${endpoint}`, {
             method: 'POST',
             headers: {
                 'Authorization': `Bearer ${token}`,
@@ -48,11 +48,14 @@ const postData = async (endpoint, payload, stateRef) => {
     }
 };
 
+
 const fetchIVUNDERLYINGCHART = () => postData('ivchart', { message: "hello" }, ivchart);
+const fetchLTPUNDERLYINGCHART = () => postData('ltpchart', { message: "hello" }, ltpchart);
 
 onMounted(() => {
     fetchClientDetails();
     fetchIVUNDERLYINGCHART();
+    fetchLTPUNDERLYINGCHART();
 });
 </script>
 
@@ -65,7 +68,39 @@ onMounted(() => {
         <!-- Add the IV Chart component -->
         <div class="chartContainer">
             <p class="heading">IV and Underlying Price Chart</p>
-            <IVChart :data="ivchart" />
+            <IVChart :data="ivchart" :series="[
+      {
+        field: 'ivavg',
+        color: '#FF6B6B',
+        title: 'IV Average',
+        priceScaleId: 'right'
+      },
+      {
+        field: 'underlying',
+        color: '#2962FF',
+        title: 'Underlying Price',
+        priceScaleId: 'left'
+      }
+      // Add more series as needed
+    ]"/>
+        </div>
+        <div class="chartContainer">
+            <p class="heading">LTP and Underlying Price Chart</p>
+            <IVChart :data="ltpchart" :series="[
+      {
+        field: 'ltpsum',
+        color: '#FF6B6B',
+        title: 'LTP Sum',
+        priceScaleId: 'right'
+      },
+      {
+        field: 'underlying',
+        color: '#2962FF',
+        title: 'Underlying Price',
+        priceScaleId: 'left'
+      }
+      // Add more series as needed
+    ]"/>
         </div>
 
         <div v-if="WS7L.length > 0" class="histogram-container">

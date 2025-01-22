@@ -7,18 +7,21 @@ const props = defineProps({
     type: Array,
     required: true,
     default: () => []
+  },
+  series: {
+    type: Array,
+    required: true,
+    default: () => []
   }
 });
 
 const chartContainer = ref(null);
 let chart = null;
-let underlyingPriceSeries = null;
-let ivSeries = null;
+let chartSeries = {};
 
 const initChart = () => {
   if (!chartContainer.value) return;
 
-  // Create the chart
   chart = createChart(chartContainer.value, {
     width: chartContainer.value.clientWidth,
     height: 400,
@@ -45,43 +48,32 @@ const initChart = () => {
     },
   });
 
-  // Create the underlying price series (left axis)
-  underlyingPriceSeries = chart.addLineSeries({
-    color: '#2962FF',
-    lineWidth: 2,
-    priceScaleId: 'left',
-    title: 'Underlying Price',
+  // Create series dynamically based on configuration
+  props.series.forEach(seriesConfig => {
+    chartSeries[seriesConfig.field] = chart.addLineSeries({
+      color: seriesConfig.color || '#2962FF',
+      lineWidth: 2,
+      priceScaleId: seriesConfig.priceScaleId || 'left',
+      title: seriesConfig.title || seriesConfig.field,
+    });
   });
 
-  // Create the IV series (right axis)
-  ivSeries = chart.addLineSeries({
-    color: '#FF6B6B',
-    lineWidth: 2,
-    priceScaleId: 'right',
-    title: 'IV Average',
-  });
-
-  // Update data
   updateChartData();
 };
 
 const updateChartData = () => {
   if (!chart || !props.data.length) return;
 
-  const underlyingData = props.data.map(item => ({
-    time: new Date(item.timestamp).getTime() / 1000,
-    value: item.underlying
-  }));
+  // Update each series with its corresponding data
+  props.series.forEach(seriesConfig => {
+    const seriesData = props.data.map(item => ({
+      time: new Date(item.timestamp).getTime() / 1000,
+      value: item[seriesConfig.field]
+    }));
+    
+    chartSeries[seriesConfig.field].setData(seriesData);
+  });
 
-  const ivData = props.data.map(item => ({
-    time: new Date(item.timestamp).getTime() / 1000,
-    value: item.ivavg
-  }));
-
-  underlyingPriceSeries.setData(underlyingData);
-  ivSeries.setData(ivData);
-
-  // Fit content
   chart.timeScale().fitContent();
 };
 
