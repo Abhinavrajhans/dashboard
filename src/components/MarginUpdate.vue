@@ -12,14 +12,22 @@
           class="search-input"
         />
       </div>
+
       <div class="submit-container">
-        <button 
-          @click="showTotpModal = true" 
-          class="submit-button"
-        >
-          Submit
-        </button>
-      </div>
+      <button 
+        @click="gotoMarginSettings()" 
+        class="margin-button"
+      >
+        Margin Settings
+      </button>
+      <button 
+        @click="showTotpModal = true" 
+        class="submit-button"
+      >
+        Submit
+      </button>
+    </div>
+
     </div>
 
     <!-- TOTP Verification Modal -->
@@ -126,9 +134,14 @@ const filteredAccounts = computed(() => {
 });
 
 
+const gotoMarginSettings = () =>{
+  router.push("/marginSettings");
+}
 
 
-// Submit handler with TOTP
+
+import * as XLSX from 'xlsx';
+
 const handleSubmitWithTotp = async () => {
   try {
     const token = localStorage.getItem('access_token');
@@ -147,21 +160,55 @@ const handleSubmitWithTotp = async () => {
       })
     });
 
-    const data = await response.json();
+    const jsonResponse = await response.json();
 
     if (!response.ok) {
-      if (response.status === 401) {
-        totpError.value = 'Invalid Password. Please try again.';
-        return;
-      }
-      throw new Error(data.detail || data.message || 'An error occurred');
+        if (response.status === 401) {
+            totpError.value = 'Invalid Password. Please try again.';
+            return;
+        }
+        throw new Error(jsonResponse.detail || jsonResponse.message || 'An error occurred');
     }
 
-    showTotpModal.value = false;
-    totpCode.value = '';
-    alert("All Accounts Margins Updated Successfully!");
-    return data;
+    // Download Excel file
+    const download = (data, title) => {
+      try {
+          if (!data || !Array.isArray(data.data)) {
+              throw new Error('Invalid data format received');
+          }
+          
+          const currentDate = new Date();
+          const formattedDate = currentDate.toLocaleString('en-US', {
+              year: 'numeric',
+              month: '2-digit', 
+              day: '2-digit',
+              hour: '2-digit',
+              minute: '2-digit',
+              second: '2-digit',
+              hour12: false
+          }).replace(/[/:]/g, '_');
 
+          const file_name = `margin_update_${formattedDate}.xlsx`;
+          
+          const wb = XLSX.utils.book_new();
+          const ws = XLSX.utils.json_to_sheet(data.data);
+          XLSX.utils.book_append_sheet(wb, ws, "Sheet1");
+          XLSX.writeFile(wb, file_name);
+      } catch (error) {
+          console.error('Download error:', error);
+          throw error;
+      }
+    };
+
+    // Trigger download with error handling
+    if (jsonResponse.dataframe) {
+        download(jsonResponse.dataframe, "margin_update");
+        showTotpModal.value = false;
+        totpCode.value = '';
+        alert("All Accounts Margins Updated Successfully!");
+    } else {
+        throw new Error('No data received from server');
+    }
   } catch (error) {
     if (!totpError.value) {
       alert(`Error: ${error.message}`);
@@ -261,9 +308,7 @@ onMounted(async () => {
   flex: 0 1 300px; /* Allow shrinking but limit initial width */
 }
 
-.submit-container {
-  flex: 0 0 auto; /* Don't grow or shrink */
-}
+
 
 .search-input {
   flex: 1;
@@ -284,6 +329,36 @@ onMounted(async () => {
 
 .search-input::placeholder {
   color: #9ca3af;
+}
+
+.submit-container {
+  display: flex;
+  gap: 16px; /* Adds spacing between buttons */
+  justify-content: flex-start;
+  align-items: center;
+}
+
+.margin-button {
+  padding: 12px 24px;
+  background-color: #10B981; /* Green color */
+  color: white;
+  border: none;
+  border-radius: 8px;
+  font-weight: 500;
+  font-size: 16px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  box-shadow: 0 2px 4px rgba(16, 185, 129, 0.2);
+}
+
+.margin-button:hover:not(:disabled) {
+  background-color: #059669;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 6px rgba(16, 185, 129, 0.3);
+}
+
+.margin-button:active:not(:disabled) {
+  transform: translateY(0);
 }
 
 .submit-button {
