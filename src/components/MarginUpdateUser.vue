@@ -113,6 +113,25 @@
           </span>
         </div>
 
+
+        <!-- Put Protection  -->
+        <div class="portfolio-field">
+          <label class="portfolio-label">Put Protection</label>
+          <div class="portfolio-input-group">
+            <input
+              type="number"
+              v-model="putProtection"
+              class="portfolio-input"
+              @input="validateputProtection"
+              :class="{ 'error-input': putProtectionError }"
+            />
+            <span class="currency-symbol">₹</span>
+          </div>
+          <span v-if="putProtectionError" class="error-text text-sm text-red-500 mt-1">
+            {{ putProtectionError }}
+          </span>
+        </div>
+
       </div> <!-- End of .portfolio-row -->
 
     </div> <!-- End of .header -->
@@ -123,6 +142,52 @@
       <p>Loading data...</p>
     </div>
 
+    <div v-if="limits && !loading && !error" class="content-wrapper">
+      <div class="flex items-center justify-between mb-4">
+        <h2 class="text-xl font-semibold text-gray-700">
+        Limits
+        </h2>
+       
+      </div>
+      <div class="table-container">
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>Lower</th>
+              <th>Upper</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>
+                <input
+                  type="number"
+                  v-model="limits['lower']"
+                  class="editable-input"
+                  @input="validateLimits"
+                  :class="{ 'error-input': limitsError.lower }"
+                />
+                <span v-if="limitsError.lower" class="error-text text-sm text-red-500 mt-1">
+                  {{ limitsError.lower }}
+                </span>
+              </td>
+              <td>
+                <input
+                  type="number"
+                  v-model="limits['upper']"
+                  class="editable-input"
+                  @input="validateLimits"
+                  :class="{ 'error-input': limitsError.upper }"
+                />
+                <span v-if="limitsError.upper" class="error-text text-sm text-red-500 mt-1">
+                  {{ limitsError.upper }}
+                </span>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+  </div>
 
     
     <!-- Main Data Table -->
@@ -321,6 +386,11 @@ const router = useRouter();
 // Data references
 const data = ref(null);
 const filteredData = ref(null);
+const limits=ref(null);
+const limitsError = ref({
+  lower: "",
+  upper: ""
+});
 const account = ref(route.params.username);
 const loading = ref(false);
 const error = ref(null);
@@ -339,6 +409,8 @@ const minMargin = ref("");
 const minMarginError = ref("");
 const ddMarginPercent = ref("");
 const ddMarginPercentError = ref("");
+const putProtection = ref("");
+const putProtectionError = ref("");
 
 // UI & Modal states
 const isSaving = ref(false);
@@ -358,6 +430,38 @@ const isUpdatingMultiplier = ref(false);
 // Multi-select for features
 const selectedFeatures = ref([]);
 const isAllSelected = ref(false);
+
+const validateLimits = () => {
+  let isValid = true;
+
+  // Validate lower limit
+  const lowerVal = Number(limits.value.lower);
+  if (isNaN(lowerVal) || lowerVal < 0) {
+    limitsError.value.lower = "Lower limit must be a positive number";
+    isValid = false;
+  } else {
+    limitsError.value.lower = "";
+  }
+
+  // Validate upper limit
+  const upperVal = Number(limits.value.upper);
+  if(upperVal<0){
+    limitsError.value.upper = "Upper limit must be greater than 0";
+    isValid = false;
+  }
+  else if (isNaN(upperVal) || upperVal <= lowerVal) {
+    limitsError.value.upper = "Upper limit must be greater than Lower limit";
+    isValid = false;
+  } else {
+    limitsError.value.upper = "";
+  }
+
+  hasUnsavedChanges.value = true;
+  return isValid;
+};
+
+
+
 
 // Computed for features
 const featuresOptionsWithAll = computed(() => {
@@ -540,11 +644,13 @@ const fetchMarginData = async () => {
 
     // Fill in local data from response
     filteredData.value = data.value?.params?.[account.value] ?? [];
+    limits.value=data.value["limits"][account.value];
     portfolioValue.value = data.value["pf"][account.value];
 
     excessMargin.value=data.value[ "margininfo" ][ account.value ]["excessMargin"];
     minMargin.value=data.value[ "margininfo" ][ account.value ]["minimumMargin"];
     ddMarginPercent.value=data.value[ "margininfo" ][ account.value ]["drawdownMargin"];
+    putProtection.value=data.value[ "putProtection" ][ account.value ]
 
 
 
@@ -640,6 +746,21 @@ const validateDDMarginPercent = () => {
   return true;
 };
 
+const validateputProtection = () => {
+  const value = Number(putProtection.value);
+  if (isNaN(value)) {
+    putProtectionError.value = "Please enter a valid number for Put Protection";
+    return false;
+  }
+  if (value < 0) {
+    putProtectionError.value = "Put Protection cannot be negative";
+    return false;
+  }
+  putProtectionError.value = "";
+  hasUnsavedChanges.value = true;
+  return true;
+};
+
 const validateMultiplier = (key) => {
   const value = Number(client_multiplier.value[key]);
   multiplierErrors.value[key] = "";
@@ -668,6 +789,8 @@ const validateField = (row, field) => {
     case "qtylimit":
     case "cvlimit":
     case "factor1":
+    case "lower":
+    case "upper":
     case "factor2":
       if (value < 0) {
         row.errors[field] = "Must be Above 0";
@@ -689,6 +812,8 @@ const updatePortfolioValue = async () => {
     validateExcessMargin() &&
     validateMinMargin() &&
     validateDDMarginPercent();
+    validateputProtection();
+    validateLimits(); 
   if (!allValid) return;
 
   // Get the structure for 'params'
@@ -719,6 +844,8 @@ const updatePortfolioValue = async () => {
           excessMargin: Number(excessMargin.value),
           minMargin: Number(minMargin.value),
           ddMarginPercent: Number(ddMarginPercent.value),
+          putProtection: Number(putProtection.value),
+          limits: limits.value,
           params: filteredArr,
         }),
       }
