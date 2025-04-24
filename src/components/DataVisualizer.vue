@@ -241,30 +241,30 @@ watch([selectedIVDate, selectedIndex], () => {
                     </button>
                 </div>
             </div>
-            <div class="details full-width">
-                        <div class="detail-item">
-                            <span class="label">CE Symbol:</span>
-                            <span>{{ bidaskspread.Details[selectedBidAskIndex].Symbol_CE }}</span>
-                        </div>
-                        <div class="detail-item">
-                            <span class="label">PE Symbol:</span>
-                            <span>{{ bidaskspread.Details[selectedBidAskIndex].Symbol_PE }}</span>
-                        </div>
-                        <div class="detail-item">
-                            <span class="label">Above CE >1%:</span>
-                            <span>
-                                {{ bidaskspread.Details[selectedBidAskIndex].above_ce }}
-                                ({{ ((bidaskspread.Details[selectedBidAskIndex].above_ce / 375) * 100).toFixed(2) }}%)
-                            </span>
-                        </div>
-                        <div class="detail-item">
-                            <span class="label">Above PE >1%:</span>
-                            <span>
-                                {{ bidaskspread.Details[selectedBidAskIndex].above_pe }}
-                                ({{ ((bidaskspread.Details[selectedBidAskIndex].above_pe / 375) * 100).toFixed(2) }}%)
-                            </span>
-                        </div>
+            <div v-if="Object.keys(bidaskspread)>0" class="details full-width">
+                <div class="detail-item">
+                    <span class="label">CE Symbol:</span>
+                    <span>{{ bidaskspread.Details[selectedBidAskIndex].Symbol_CE }}</span>
                 </div>
+                <div class="detail-item">
+                    <span class="label">PE Symbol:</span>
+                    <span>{{ bidaskspread.Details[selectedBidAskIndex].Symbol_PE }}</span>
+                </div>
+                <div class="detail-item">
+                    <span class="label">Above CE >1%:</span>
+                    <span>
+                        {{ bidaskspread.Details[selectedBidAskIndex].above_ce }}
+                        ({{ ((bidaskspread.Details[selectedBidAskIndex].above_ce / 375) * 100).toFixed(2) }}%)
+                    </span>
+                </div>
+                <div class="detail-item">
+                    <span class="label">Above PE >1%:</span>
+                    <span>
+                        {{ bidaskspread.Details[selectedBidAskIndex].above_pe }}
+                        ({{ ((bidaskspread.Details[selectedBidAskIndex].above_pe / 375) * 100).toFixed(2) }}%)
+                    </span>
+                </div>
+            </div>
 
             <IVChart
                 :data="bidaskspread[selectedBidAskIndex]"
