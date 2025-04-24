@@ -241,7 +241,11 @@ watch([selectedIVDate, selectedIndex], () => {
                     </button>
                 </div>
             </div>
-            <div v-if="Object.keys(bidaskspread)>0" class="details full-width">
+            <!-- only show once Details & the selected index exist -->
+            <div
+                v-if="bidaskspread.Details && bidaskspread.Details[selectedBidAskIndex]"
+                class="details full-width"
+                >
                 <div class="detail-item">
                     <span class="label">CE Symbol:</span>
                     <span>{{ bidaskspread.Details[selectedBidAskIndex].Symbol_CE }}</span>
@@ -253,15 +257,15 @@ watch([selectedIVDate, selectedIndex], () => {
                 <div class="detail-item">
                     <span class="label">Above CE >1%:</span>
                     <span>
-                        {{ bidaskspread.Details[selectedBidAskIndex].above_ce }}
-                        ({{ ((bidaskspread.Details[selectedBidAskIndex].above_ce / 375) * 100).toFixed(2) }}%)
+                    {{ bidaskspread.Details[selectedBidAskIndex].above_ce }}
+                    ({{ ((bidaskspread.Details[selectedBidAskIndex].above_ce / 375) * 100).toFixed(2) }}%)
                     </span>
                 </div>
                 <div class="detail-item">
                     <span class="label">Above PE >1%:</span>
                     <span>
-                        {{ bidaskspread.Details[selectedBidAskIndex].above_pe }}
-                        ({{ ((bidaskspread.Details[selectedBidAskIndex].above_pe / 375) * 100).toFixed(2) }}%)
+                    {{ bidaskspread.Details[selectedBidAskIndex].above_pe }}
+                    ({{ ((bidaskspread.Details[selectedBidAskIndex].above_pe / 375) * 100).toFixed(2) }}%)
                     </span>
                 </div>
             </div>
