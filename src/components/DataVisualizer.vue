@@ -11,6 +11,7 @@ const signal_delay = ref([]);
 const ivchart = ref([]);
 const bidaskspread=ref({})
 const selectedBidAskIndex = ref(1);
+const error=ref()
 
 
 // Add new refs for dates and index selection
@@ -35,6 +36,34 @@ const fetchClientDetails = async () => {
         console.error('Error fetching client details:', error);
     }
 };
+
+// API functions
+const fetchData = async (endpoint, stateRef) => {
+  try {
+    const token = localStorage.getItem('access_token');
+    if (!token) throw new Error('User not authenticated');
+
+    const response = await fetch(`https://api.swancapital.in/${endpoint}`, {
+      method: 'GET',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json',
+      },
+    });
+
+    if (!response.ok) {
+      const errorMessage = await response.text();
+      throw new Error(`Error fetching ${endpoint}: ${errorMessage}`);
+    }
+
+    const data = await response.json();
+    stateRef.value = (data || []);
+  } catch (err) {
+    error.value = err.message;
+    console.error(`Error fetching ${endpoint}:`, err.message);
+  }
+};
+
 
 const postData = async (endpoint, payload, stateRef, loadingRef) => {
     loadingRef.value = true;
