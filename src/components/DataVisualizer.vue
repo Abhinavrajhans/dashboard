@@ -9,6 +9,9 @@ const WS7L = ref([]);
 const WS8L = ref([]);
 const signal_delay = ref([]);
 const ivchart = ref([]);
+const bidaskspread=ref({})
+const selectedBidAskIndex = ref(1);
+
 
 // Add new refs for dates and index selection
 const selectedIndex = ref('NIFTY');
@@ -16,6 +19,7 @@ const selectedIVDate = ref(new Date());
 
 // Add loading states
 const isIVChartLoading = ref(false);
+const bidaskspreadLoading = ref(false);
 
 const fetchClientDetails = async () => {
     try {
@@ -69,9 +73,19 @@ const fetchIVUNDERLYINGCHART = () => {
 };
 
 
+const fetchBidAskSpreadCHART = () => {
+
+    postData('bidaskspread', 
+      {"hello":1}
+    , bidaskspread, bidaskspreadLoading);
+};
+
+
+
 onMounted(() => {
     fetchClientDetails();
     fetchIVUNDERLYINGCHART();
+    fetchBidAskSpreadCHART();
    
 });
 
@@ -151,6 +165,36 @@ watch([selectedIVDate, selectedIndex], () => {
                 ]"
             />
         </div>
+
+
+        <div class="chartContainer">
+     
+            <div class="chart-header">
+                <p class="heading">Bid Ask Spread Chart</p>
+                <select v-model="selectedBidAskIndex" class="bidask-select">
+                    <option v-for="n in 6" :key="n" :value="n">{{ n }}</option>
+                </select>
+            </div>
+            <IVChart 
+                :data="bidaskspread[selectedBidAskIndex]" 
+                :series="[
+                    {
+                        field: 'bidaskspreadCE',
+                        color: '#FF6B6B',
+                        title: 'bidaskspreadCE',
+                        priceScaleId: 'right'
+                    },
+                    {
+                        field: 'bidaskspreadPE',
+                        color: '#2962FF',
+                        title: 'bidaskspreadPE',
+                        priceScaleId: 'right'
+                    }
+                ]"
+            />
+        </div>
+
+
 
         <div v-if="WS7L.length > 0" class="histogram-container">
             <p class="heading">WebSocket 7 Lag</p>
