@@ -12,6 +12,9 @@ const ivchart = ref([]);
 const bidaskspread=ref({})
 const selectedBidAskIndex = ref(1);
 const error=ref()
+const optionExpiryDates=ref({})
+const selectedOptionKey = ref('NIFTY');
+const selectedOptionExpiry = ref('');
 
 
 // Add new refs for dates and index selection
@@ -102,19 +105,23 @@ const fetchIVUNDERLYINGCHART = () => {
 };
 
 
+
 const fetchBidAskSpreadCHART = () => {
 
     postData('bidaskspread', 
-      {"hello":1}
+    {
+      index: selectedOptionKey.value,
+      expiry: selectedOptionExpiry.value, 
+    }
     , bidaskspread, bidaskspreadLoading);
 };
 
-
+const fetchexpiryDates = () => fetchData('optionexpirydetails', optionExpiryDates);
 
 onMounted(() => {
     fetchClientDetails();
     fetchIVUNDERLYINGCHART();
-    fetchBidAskSpreadCHART();
+    fetchexpiryDates()
    
 });
 
@@ -180,7 +187,6 @@ watch([selectedIVDate, selectedIndex], () => {
         <div class="chartContainer">
             <div class="chart-header">
                 <p class="heading">LTP and Underlying Price Chart</p>
-
             </div>
             <IVChart 
                 :data="ivchart" 
@@ -197,28 +203,74 @@ watch([selectedIVDate, selectedIndex], () => {
 
 
         <div class="chartContainer">
-     
             <div class="chart-header">
                 <p class="heading">Bid Ask Spread Chart</p>
-                <select v-model="selectedBidAskIndex" class="bidask-select">
-                    <option v-for="n in 6" :key="n" :value="n">{{ n }}</option>
-                </select>
+                
+                <div class="bidask-controls">
+                    <!-- Index select -->
+                    <select v-model="selectedOptionKey" class="index-select">
+                        <option value="NIFTY">NIFTY</option>
+                        <option value="SENSEX">SENSEX</option>
+                    </select>
+                    
+
+
+                    <!-- Expiry select -->
+                    <select v-model="selectedOptionExpiry" class="expiry-select">
+                    <option
+                        v-for="date in optionExpiryDates[selectedOptionKey]"
+                        :key="date"
+                        :value="date"
+                    >
+                        {{ date }}
+                    </option>
+                    </select>
+
+                    <!-- Slice select -->
+                    <select v-model.number="selectedBidAskIndex" class="bidask-select">
+                        <option v-for="n in 6" :key="n" :value="n">{{ n }}</option>
+                    </select>
+
+                    <!-- NEW: submit button -->
+                    <button
+                        @click="fetchBidAskSpreadCHART"
+                        class="submit-button"
+                        :disabled="bidaskspreadLoading"
+                    >
+                    {{ bidaskspreadLoading ? 'Loading…' : 'Submit' }}
+                    </button>
+                </div>
             </div>
-            <IVChart 
-                :data="bidaskspread[selectedBidAskIndex]" 
+            <div class="details full-width">
+                        <div class="detail-item">
+                            <span class="label">CE Symbol:</span>
+                            <span>{{ bidaskspread.Details[selectedBidAskIndex].Symbol_CE }}</span>
+                        </div>
+                        <div class="detail-item">
+                            <span class="label">PE Symbol:</span>
+                            <span>{{ bidaskspread.Details[selectedBidAskIndex].Symbol_PE }}</span>
+                        </div>
+                        <div class="detail-item">
+                            <span class="label">Above CE >1%:</span>
+                            <span>
+                                {{ bidaskspread.Details[selectedBidAskIndex].above_ce }}
+                                ({{ ((bidaskspread.Details[selectedBidAskIndex].above_ce / 375) * 100).toFixed(2) }}%)
+                            </span>
+                        </div>
+                        <div class="detail-item">
+                            <span class="label">Above PE >1%:</span>
+                            <span>
+                                {{ bidaskspread.Details[selectedBidAskIndex].above_pe }}
+                                ({{ ((bidaskspread.Details[selectedBidAskIndex].above_pe / 375) * 100).toFixed(2) }}%)
+                            </span>
+                        </div>
+                </div>
+
+            <IVChart
+                :data="bidaskspread[selectedBidAskIndex]"
                 :series="[
-                    {
-                        field: 'bidaskspreadCE',
-                        color: '#FF6B6B',
-                        title: 'bidaskspreadCE',
-                        priceScaleId: 'right'
-                    },
-                    {
-                        field: 'bidaskspreadPE',
-                        color: '#2962FF',
-                        title: 'bidaskspreadPE',
-                        priceScaleId: 'right'
-                    }
+                    { field: 'bidaskspreadCE', color: '#FF6B6B', title: 'CE', priceScaleId: 'right' },
+                    { field: 'bidaskspreadPE', color: '#2962FF', title: 'PE', priceScaleId: 'right' }
                 ]"
             />
         </div>
@@ -241,13 +293,48 @@ watch([selectedIVDate, selectedIndex], () => {
 </template>
 
 <style scoped>
+
+.bidask-controls { display: flex; gap: 10px; align-items: center; }
+.expiry-select, .index-select, .date-select, .bidask-select { padding: 6px; border: 1px solid #ccc; border-radius: 4px; font-size: 14px; }
+
+/* --- DETAILS ROW --- */
+.details {
+  grid-column: span 2;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
+  margin-top: 12px;
+}
+.detail-item {
+  background: #f9f9f9;
+  padding: 8px 12px;
+  border-radius: 4px;
+  font-size: 14px;
+}
+.detail-item .label {
+  font-weight: 600;
+  margin-right: 4px;
+}
+
 .chart-header {
     display: flex;
     justify-content: space-between;
     align-items: center;
     margin-bottom: 15px;
 }
-
+.submit-button {
+  padding: 6px 12px;
+  border: none;
+  background-color: #007bff;
+  color: white;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 14px;
+}
+.submit-button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
 .chart-controls {
     display: flex;
     align-items: center;
