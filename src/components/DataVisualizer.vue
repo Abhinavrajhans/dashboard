@@ -27,7 +27,7 @@ const bidaskspreadLoading = ref(false);
 
 const fetchClientDetails = async () => {
     try {
-        const response = await fetch('https://production2.swancapital.in/lagsData');
+        const response = await fetch('https://api.swancapital.in/lagsData');
         if (!response.ok) {
             throw new Error(`HTTP error! status: ${response.status}`);
         }
@@ -46,7 +46,7 @@ const fetchData = async (endpoint, stateRef) => {
     const token = localStorage.getItem('access_token');
     if (!token) throw new Error('User not authenticated');
 
-    const response = await fetch(`https://production2.swancapital.in/${endpoint}`, {
+    const response = await fetch(`https://api.swancapital.in/${endpoint}`, {
       method: 'GET',
       headers: {
         'Authorization': `Bearer ${token}`,
@@ -73,7 +73,7 @@ const postData = async (endpoint, payload, stateRef, loadingRef) => {
     try {
         const token = localStorage.getItem('access_token');
         if (!token) throw new Error('User not authenticated');
-        const response = await fetch(`https://production2.swancapital.in/${endpoint}`, {
+        const response = await fetch(`https://api.swancapital.in/${endpoint}`, {
             method: 'POST',
             headers: {
                 'Authorization': `Bearer ${token}`,
