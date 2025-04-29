@@ -14,6 +14,7 @@
             class="form-input"
             :class="{ 'input-error': totpError }"
             @input="totpError = ''"
+            :disabled="isProcessing"
           />
           <span v-if="totpError" class="error-text">{{ totpError }}</span>
         </div>
@@ -21,14 +22,17 @@
           <button 
             @click="cancelTotpModal" 
             class="cancel-button2"
+            :disabled="isProcessing"
           >
             Cancel
           </button>
           <button 
             @click="handleTotpSubmit" 
             class="submit-button"
+            :disabled="isProcessing"
           >
-            Submit
+            <span v-if="isProcessing" class="loader-icon"></span>
+            {{ isProcessing ? 'Processing...' : 'Submit' }}
           </button>
         </div>
       </div>
@@ -115,7 +119,7 @@
 
 
         <!-- Put Protection  -->
-        <div class="portfolio-field">
+        <div v-if="putProtection!=null" class="portfolio-field">
           <label class="portfolio-label">Put Protection</label>
           <div class="portfolio-input-group">
             <input
@@ -131,6 +135,26 @@
             {{ putProtectionError }}
           </span>
         </div>
+
+        <!-- Cash Alert Percentage  -->
+        <div  class="portfolio-field">
+          <label class="portfolio-label">Cash Alert Percentage</label>
+          <div class="portfolio-input-group">
+            <input
+              type="number"
+              v-model="cashalertpercentage"
+              class="portfolio-input"
+              @input="validatecashalertpercentage"
+              :class="{ 'error-input': cashalertpercentageError }"
+            />
+            <span class="currency-symbol">₹</span>
+          </div>
+          <span v-if="cashalertpercentageError" class="error-text text-sm text-red-500 mt-1">
+            {{ cashalertpercentageError }}
+          </span>
+        </div>
+
+        
 
       </div> <!-- End of .portfolio-row -->
 
@@ -190,101 +214,121 @@
   </div>
 
     
-    <!-- Main Data Table -->
-    <div v-if="filteredData && filteredData.length > 0 && !loading && !error" class="content-wrapper">
-      <!-- Existing content structure -->
-      <div class="stats-selector">
-        <label for="stat-option" class="stat-label">Choose a Statistic:</label>
-        <select v-model="selectedStat" id="stat-option" class="stat-dropdown">
-          <option value="sum">Sum</option>
-          <option value="avg">Average</option>
-          <option value="max">Maximum</option>
-          <option value="min">Minimum</option>
-        </select>
-      </div>
-
-      <div class="table-container">
-        <table class="data-table">
-          <thead>
-            <tr>
-              <th>Strategy</th>
-              <th>Qty Limit ({{ computeStat('qtylimit') }})</th>
-              <th>CV Limit ({{ computeStat('cvlimit') }})</th>
-              <th>Factor 1 ({{ computeStat('factor1') }})</th>
-              <th>Factor 2 ({{ computeStat('factor2') }})</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr v-for="(row, index) in filteredData" :key="index">
-              <td class="strategy-cell">{{ row.strategy }}</td>
-              <td>
-                <input 
-                  type="number" 
-                  v-model="row.qtylimit" 
-                  class="editable-input"
-                  @input="validateField(row, 'qtylimit')"
-                  :class="{ 'error-input': row.errors?.qtylimit }"
-                />
-                <span v-if="row.errors?.qtylimit" class="error-text text-sm text-red-500 mt-1">
-                  {{ row.errors.qtylimit }}
-                </span>
-              </td>
-              <td>
-                <input 
-                  type="number" 
-                  v-model="row.cvlimit" 
-                  class="editable-input"
-                  @input="validateField(row, 'cvlimit')"
-                  :class="{ 'error-input': row.errors?.cvlimit }"
-                />
-                <span v-if="row.errors?.cvlimit" class="error-text text-sm text-red-500 mt-1">
-                  {{ row.errors.cvlimit }}
-                </span>
-              </td>
-              <td>
-                <input 
-                  type="number" 
-                  v-model="row.factor1" 
-                  class="editable-input"
-                  @input="validateField(row, 'factor1')"
-                  :class="{ 'error-input': row.errors?.factor1 }"
-                />
-                <span v-if="row.errors?.factor1" class="error-text text-sm text-red-500 mt-1">
-                  {{ row.errors.factor1 }}
-                </span>
-              </td>
-              <td>
-                <input 
-                  type="number" 
-                  v-model="row.factor2" 
-                  class="editable-input"
-                  @input="validateField(row, 'factor2')"
-                  :class="{ 'error-input': row.errors?.factor2 }"
-                />
-                <span v-if="row.errors?.factor2" class="error-text text-sm text-red-500 mt-1">
-                  {{ row.errors.factor2 }}
-                </span>
-              </td>
-            </tr>
-          </tbody>
-        </table>
-      </div>
-
-      <div class="action-buttons">
-        <button 
-          @click="showTotpModalWithAction('portfolio')" 
-          class="save-button"
-          :disabled="hasErrors || isSaving"
-        >
-          <span class="button-icon">{{ isSaving ? '⌛' : '💾' }}</span>
-          {{ isSaving ? 'Saving...' : 'Save Changes' }}
-        </button>
-        <button @click="confirmCancel" class="cancel-button">
-          <span class="button-icon">✖</span>
-          Cancel
-        </button>
-      </div>
+<!-- Main Data Table -->
+<div v-if="filteredData  && !loading && !error" class="content-wrapper">
+  <!-- Existing content structure -->
+  <div class="flex items-center justify-between mb-4">
+    <!-- Add title here similar to other sections -->
+    <h2 class="text-xl font-semibold text-gray-700">
+      Main Data Table
+    </h2>
+  </div>
+  
+  <div class="select-container flex items-center justify-between mb-4">
+    <a-select
+      v-model:value="selectedStrategies"
+      mode="multiple"
+      placeholder="Select Strategies"
+      style="width: 100%"
+      :options="strategiesOptionsWithAll"
+      :maxTagCount="3"
+      @change="handleStrategyChange"
+      :disabled="isSaving"
+    ></a-select>
+    
+    <div class="stats-selector ml-4">
+      <label for="stat-option" class="stat-label">Choose a Statistic:</label>
+      <select v-model="selectedStat" id="stat-option" class="stat-dropdown">
+        <option value="sum">Sum</option>
+        <option value="avg">Average</option>
+        <option value="max">Maximum</option>
+        <option value="min">Minimum</option>
+      </select>
     </div>
+  </div>
+
+  <div class="table-container">
+    <table class="data-table">
+      <thead>
+        <tr>
+          <th>Strategy</th>
+          <th>Qty Limit ({{ computeStat('qtylimit') }})</th>
+          <th>CV Limit ({{ computeStat('cvlimit') }})</th>
+          <th>Factor 1 ({{ computeStat('factor1') }})</th>
+          <th>Factor 2 ({{ computeStat('factor2') }})</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr v-for="(row, index) in filteredData" :key="index">
+          <td class="strategy-cell">{{ row.strategy }}</td>
+          <td>
+            <input 
+              type="number" 
+              v-model="row.qtylimit" 
+              class="editable-input"
+              @input="validateField(row, 'qtylimit')"
+              :class="{ 'error-input': row.errors?.qtylimit }"
+            />
+            <span v-if="row.errors?.qtylimit" class="error-text text-sm text-red-500 mt-1">
+              {{ row.errors.qtylimit }}
+            </span>
+          </td>
+          <td>
+            <input 
+              type="number" 
+              v-model="row.cvlimit" 
+              class="editable-input"
+              @input="validateField(row, 'cvlimit')"
+              :class="{ 'error-input': row.errors?.cvlimit }"
+            />
+            <span v-if="row.errors?.cvlimit" class="error-text text-sm text-red-500 mt-1">
+              {{ row.errors.cvlimit }}
+            </span>
+          </td>
+          <td>
+            <input 
+              type="number" 
+              v-model="row.factor1" 
+              class="editable-input"
+              @input="validateField(row, 'factor1')"
+              :class="{ 'error-input': row.errors?.factor1 }"
+            />
+            <span v-if="row.errors?.factor1" class="error-text text-sm text-red-500 mt-1">
+              {{ row.errors.factor1 }}
+            </span>
+          </td>
+          <td>
+            <input 
+              type="number" 
+              v-model="row.factor2" 
+              class="editable-input"
+              @input="validateField(row, 'factor2')"
+              :class="{ 'error-input': row.errors?.factor2 }"
+            />
+            <span v-if="row.errors?.factor2" class="error-text text-sm text-red-500 mt-1">
+              {{ row.errors.factor2 }}
+            </span>
+          </td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="action-buttons">
+    <button 
+      @click="showTotpModalWithAction('portfolio')" 
+      class="save-button"
+      :disabled="hasErrors || isSaving"
+    >
+      <span class="button-icon">{{ isSaving ? '⌛' : '💾' }}</span>
+      {{ isSaving ? 'Saving...' : 'Save Changes' }}
+    </button>
+    <button @click="confirmCancel" class="cancel-button">
+      <span class="button-icon">✖</span>
+      Cancel
+    </button>
+  </div>
+</div>
     <!-- Client Multiplier Table -->
     <div v-if="!loading && !error" class="content-wrapper">
       <div class="flex items-center justify-between mb-4">
@@ -328,7 +372,9 @@
         <button 
           @click="showTotpModalWithAction('fetchmultiplier')" 
           class="fetch-button"
+          :disabled="isProcessing"
         >
+          <span v-if="isProcessing && modalAction === 'fetchmultiplier'" class="loader-icon-light"></span>
           Fetch Data
         </button>
  
@@ -366,7 +412,7 @@
         <button 
           @click="showTotpModalWithAction('multiplier')" 
           class="save-button"
-          :disabled="isUpdatingMultiplier"
+          :disabled="isUpdatingMultiplier || isProcessing"
         >
           <span class="button-icon">{{ isUpdatingMultiplier ? '⌛' : '💾' }}</span>
           {{ isUpdatingMultiplier ? 'Updating...' : 'Update Multiplier' }}
@@ -409,8 +455,10 @@ const minMargin = ref("");
 const minMarginError = ref("");
 const ddMarginPercent = ref("");
 const ddMarginPercentError = ref("");
-const putProtection = ref("");
+const putProtection = ref(null);
 const putProtectionError = ref("");
+const cashalertpercentage=ref(0);
+const cashalertpercentageError=ref("");
 
 // UI & Modal states
 const isSaving = ref(false);
@@ -420,6 +468,7 @@ const showTotpModal = ref(false);
 const totpCode = ref("");
 const totpError = ref("");
 const modalAction = ref("");
+const isProcessing = ref(false);
 
 // Data for multipliers
 const live_clients = ref({});
@@ -430,6 +479,84 @@ const isUpdatingMultiplier = ref(false);
 // Multi-select for features
 const selectedFeatures = ref([]);
 const isAllSelected = ref(false);
+
+
+
+// Add these new refs for strategy selection
+const selectedStrategies = ref([]);
+const originalFilteredData = ref(null);
+
+const checkAllPresent= () => {
+      return Object.values(data.value.swan_baskets).every(value =>
+        Object.values(selectedStrategies.value).includes(value)
+      );
+};
+
+
+// Computed for features
+const strategiesOptionsWithAll = computed(() => {
+  if (!data.value || !data.value.swan_baskets) {
+    return [];
+  }
+  return [
+    { label: checkAllPresent() ? "Remove All" : "All", value: "all" },
+    ...data.value.swan_baskets.map((feature) => ({
+      label: feature,
+      value: feature,
+    })),
+  ];
+});
+
+
+const selectStrategyMainTable=(basket)=>{
+  // Filter the data based on selected strategies
+    filteredData.value = originalFilteredData.value.filter(item => 
+          selectedStrategies.value.includes(item.strategy)
+        );
+
+    // Loop over the selected strategies and add a default object if it doesn't exist in strategies
+    basket.forEach(strategy => {
+      // Check if the strategy does NOT exist in the strategies array
+      if (!filteredData.value.some(item => item.strategy === strategy)) {
+        filteredData.value.push({
+          strategy: strategy,
+          qtylimit: 0,
+          cvlimit: 0,
+          factor1: 0,
+          factor2: 0
+        });
+      }
+    });
+}
+
+// Handle strategy selection changes
+const handleStrategyChange = (value) => {
+  if (!filteredData.value) return;
+  console.log("value is:",value);
+  
+  // Store original data if not stored yet
+  if (!originalFilteredData.value) {
+    originalFilteredData.value = [...filteredData.value];
+  }
+  
+  if (value.includes("all")) {
+    if (checkAllPresent()) {
+      selectedStrategies.value=[];
+    } else {
+      selectedStrategies.value=data.value.swan_baskets;
+    }
+    selectStrategyMainTable(selectedStrategies.value)
+  } else {
+    // Normal selection handling
+    selectedStrategies.value = value.filter((strategy) => strategy !== "all");
+    if (selectedStrategies.value.length ===0){
+      selectedStrategies.value=[]
+      filteredData.value = [];
+    }
+    selectStrategyMainTable(selectedStrategies.value)
+  }
+};
+
 
 const validateLimits = () => {
   let isValid = true;
@@ -522,6 +649,8 @@ const showTotpModalWithAction = (action) => {
 
 // Cancel TOTP Modal
 const cancelTotpModal = () => {
+  if (isProcessing.value) return;
+  
   showTotpModal.value = false;
   modalAction.value = "";
   totpCode.value = "";
@@ -530,6 +659,10 @@ const cancelTotpModal = () => {
 
 // TOTP Submit Handler
 const handleTotpSubmit = async () => {
+  if (isProcessing.value) return;
+  
+  isProcessing.value = true;
+  try {
   switch (modalAction.value) {
     case "portfolio":
       await updatePortfolioValue();
@@ -540,6 +673,12 @@ const handleTotpSubmit = async () => {
     case "fetchmultiplier":
       await fetchNewDict();
       break;
+    }
+  } catch (error) {
+    console.error("TOTP submission error:", error);
+    totpError.value = "An unexpected error occurred. Please try again.";
+  } finally {
+    isProcessing.value = false;
   }
 };
 
@@ -616,7 +755,7 @@ const fetchNewDict = async () => {
     const result = await response.json();
     fetchedDict.value = result; // Store the dictionary in fetchedDict
     Object.keys(client_multiplier.value).forEach((key) => {
-      if (key === 'swanlongoptions' || key === 'swan_positional') return;
+      if (key === 'swanlongoptions' || key === 'swan_positional' || key==='swan_dma' || key==='swanlongoptions_v2') return;
       client_multiplier.value[key] = fetchedDict.value['Multiplier'];
       validateMultiplier(key);
     });
@@ -627,13 +766,14 @@ const fetchNewDict = async () => {
     hasUnsavedChanges.value = false;
     
   } catch (err) {
-    alert(`Error fetching data: ${err.message}`);
+    totpError.value = `Error: ${err.message}`;
     console.error("fetchNewDict error:", err.message);
   }
 };
 
 
 
+// Update your fetchMarginData function to store original data
 const fetchMarginData = async () => {
   loading.value = true;
   error.value = null;
@@ -644,13 +784,26 @@ const fetchMarginData = async () => {
 
     // Fill in local data from response
     filteredData.value = data.value?.params?.[account.value] ?? [];
-    limits.value=data.value["limits"][account.value];
+    // Store original data for filtering
+    originalFilteredData.value = [...filteredData.value];
+    
+    // Rest of your existing function...
+    if (data.value?.limits && data.value.limits[account.value] !== undefined) {
+      limits.value = data.value.limits[account.value];
+    }
     portfolioValue.value = data.value["pf"][account.value];
 
     excessMargin.value=data.value[ "margininfo" ][ account.value ]["excessMargin"];
     minMargin.value=data.value[ "margininfo" ][ account.value ]["minimumMargin"];
     ddMarginPercent.value=data.value[ "margininfo" ][ account.value ]["drawdownMargin"];
-    putProtection.value=data.value[ "putProtection" ][ account.value ]
+
+    if (data.value?.putProtection && data.value.putProtection[account.value] !== undefined) {
+      putProtection.value=data.value[ "putProtection" ][ account.value ]
+    }
+    if(data.value?.cashalertinputs && data.value.cashalertinputs[account.value] !== undefined) {
+      cashalertpercentage.value=data.value["cashalertinputs"][account.value]
+    }
+
 
 
 
@@ -673,6 +826,12 @@ const fetchMarginData = async () => {
       isAllSelected.value =
         selectedFeatures.value.length === data.value.baskets.length;
     }
+    
+    // Initialize selectedStrategies with all strategies
+    if (filteredData.value && filteredData.value.length > 0) {
+      const allStrategies = [...new Set(filteredData.value.map(item => item.strategy))];
+      selectedStrategies.value = allStrategies;
+    }
 
     hasUnsavedChanges.value = false;
   } catch (err) {
@@ -694,6 +853,15 @@ const validatePortfolioValue = () => {
   }
   if (value < 0) {
     portfolioError.value = "Portfolio Value cannot be negative";
+    return false;
+  }
+  
+  if(value<limits.value.lower){
+    portfolioError.value = "Portfolio Value cannot be less than Minimum Portfolio Value"; 
+    return false;
+  }
+  if(value>limits.value.upper){
+    portfolioError.value = "Portfolio Value cannot be greater than Maximum Portfolio Value";  
     return false;
   }
   portfolioError.value = "";
@@ -760,6 +928,21 @@ const validateputProtection = () => {
   hasUnsavedChanges.value = true;
   return true;
 };
+
+const validatecashalertpercentage = () => {
+  const value = Number(cashalertpercentage.value);
+  if (isNaN(value)) {
+    cashalertpercentageError.value = "Please enter a valid number for Cash Alert Percentage";
+    return false;
+  }
+  if (value < 0) {
+    cashalertpercentageError.value = "Cash Alert Percentage cannot be negative";
+    return false;
+  }
+  cashalertpercentageError.value = "";
+  hasUnsavedChanges.value = true;
+  return true;
+}
 
 const validateMultiplier = (key) => {
   const value = Number(client_multiplier.value[key]);
@@ -830,7 +1013,7 @@ const updatePortfolioValue = async () => {
     if (!token) throw new Error("Authentication required");
 
     const response = await fetch(
-      `https://api.swancapital.in/UpdatePortfolioValue`,
+      `https://production2.swancapital.in/UpdatePortfolioValue`,
       {
         method: "POST",
         headers: {
@@ -845,6 +1028,7 @@ const updatePortfolioValue = async () => {
           minMargin: Number(minMargin.value),
           ddMarginPercent: Number(ddMarginPercent.value),
           putProtection: Number(putProtection.value),
+          cashalertpercentage: Number(cashalertpercentage.value),
           limits: limits.value,
           params: filteredArr,
         }),
@@ -916,6 +1100,7 @@ const updateMultiplier = async () => {
     await fetchMarginData();
   } catch (err) {
     alert(`Error updating client multiplier: ${err.message}`);
+    totpError.value = err.message;
     console.error("Error updating client multiplier:", err.message);
   } finally {
     isUpdatingMultiplier.value = false;
